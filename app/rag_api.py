@@ -187,6 +187,36 @@ EXPAND = [
 ]
 
 
+# Явное упоминание кодекса в вопросе («Jinoyat kodeksiga koʻra…», «по Трудовому кодексу», «QQS») —
+# ищем и внутри этого кодекса, и поднимаем его статьи. Шаблон по norm(вопроса) -> часть norm(названия).
+CODE_HINTS = [
+    (r"konstitutsiya|конституц", "konstitutsiya"), (r"mehnat kodeks|трудов\w* кодекс", "mehnat kodeksi"),
+    (r"fuqarolik kodeks|гражданск\w* кодекс", "fuqarolik kodeksi"), (r"oila kodeks|семейн\w* кодекс", "oila kodeksi"),
+    (r"jinoyat kodeks|уголовн(ый|ого|ом|ому) кодекс", "jinoyat kodeksi"),
+    (r"jinoyat.protsessual|уголовно.процессуальн", "jinoyat-protsessual"),
+    (r"mamuriy javobgarlik|административн\w* ответственност", "mamuriy javobgarlik togrisidagi kodeksi"),
+    (r"soliq kodeks|налогов\w* кодекс|\bqqs\b|qoshilgan qiymat solig|daromad solig|foyda solig|\bндс\b|\bндфл\b",
+     "soliq kodeksi"),
+    (r"uy.joy kodeks|жилищн\w* кодекс", "uy-joy kodeksi"), (r"yer kodeks|земельн\w* кодекс", "yer kodeksi"),
+    (r"saylov kodeks|избирательн\w* кодекс", "saylov kodeksi"), (r"bojxona|таможен", "bojxona kodeksi"),
+]
+CODE_BOOST = 0.1
+_code_keys = {}
+
+
+def code_keys(question):
+    """Номера кодексов, которые прямо названы в вопросе (по узбекскому названию; номер один для обоих языков)."""
+    qn = norm(question)
+    frags = [frag for pat, frag in CODE_HINTS if re.search(pat, qn)]
+    if not frags:
+        return set()
+    if not _code_keys:
+        for r in db.conn().execute("SELECT key, title FROM docs WHERE lang='uz' AND active=1 "
+                                   "AND form IN ('Кодекс','Конституция')"):
+            _code_keys[r["key"]] = norm(r["title"])
+    return {k for k, t in _code_keys.items() for f in frags if f in t}
+
+
 def expand(q):
     low = q.lower()
     add = [rep for pat, rep in EXPAND if re.search(pat, low)]
@@ -198,6 +228,13 @@ W_COV, W_HP, W_RS = 0.35, 0.25, 0.4   # вес: покрытие слов воп
 
 def retrieve(question, lang, rewritten, k, as_of=None, orig_rows=None):
     cands = {}
+    hinted = code_keys(question)
+    for key in hinted:   # статьи названного кодекса попадают в кандидаты, даже если общий поиск их не нашёл
+        rows = db.search_articles(rewritten or question, lang, limit=15, active_only=True, key=key, count=False)[0]
+        if rows:
+            best = -rows[0]["score"] or 1.0
+            for r in rows:
+                cands.setdefault(r["id"], (r, round(min(1.0, 0.8 * max(0.0, -r["score"]) / best), 4)))
     for q, weight in ((rewritten, 1.0), (question, 0.9)):
         if not q:
             continue
@@ -221,6 +258,8 @@ def retrieve(question, lang, rewritten, k, as_of=None, orig_rows=None):
         sc *= _special_penalty(r, question, rewritten)
         if r["amending"]:          # акты «о внесении изменений» — не основной текст нормы
             sc *= 0.6
+        if r["key"] in hinted:
+            sc += CODE_BOOST
         if r["form"] in ("Кодекс", "Конституция"):
             sc += 0.05
         elif r["form"] == "Закон":
@@ -237,6 +276,8 @@ GEN_SYSTEM = """You are a legal question-answering system for the legislation of
 Answer ONLY from the numbered contexts (articles from lex.uz). Rules:
 - Every factual sentence must end with a citation like [1] or [2][3] that refers to the context number.
 - Copy numbers (days, sums, percent, BHM/БРВ, terms) exactly as written in the context.
+- Cite the article that states the rule directly. If contexts disagree, rely on the code or law in force
+  (Konstitutsiya, kodeks, qonun) over resolutions or decrees that describe earlier changes ("... dan ... gacha pasaytirildi").
 - If the contexts do not contain the answer, or the question is not about Uzbek law, set "no_answer": true and
   write one short sentence that the legislation in the found sources does not answer this question. Never guess.
 - For each citation give "quote": an exact verbatim fragment (one sentence or clause, max 300 characters)
