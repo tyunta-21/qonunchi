@@ -20,6 +20,7 @@ SYNC_TIMEOUT = float(os.environ.get("RAG_SYNC_TIMEOUT", "110"))
 ITEM_TIMEOUT = float(os.environ.get("RAG_ITEM_TIMEOUT", "60"))
 WORKERS = int(os.environ.get("RAG_WORKERS", "10"))
 RATE_PER_SEC = float(os.environ.get("RAG_RATE_PER_SEC", "5"))
+_search_pool = cf.ThreadPoolExecutor(max_workers=10)
 GEN_CONTEXTS = 8                     # сколько статей видит модель
 MAX_CTX_CHARS = 3500
 API_DB = os.environ.get("API_DB_PATH", os.path.join(os.path.dirname(db.DB_PATH), "api.db"))
@@ -127,11 +128,14 @@ def _head_precision(row, ts):
     return sum(any(w.startswith(t) or t.startswith(w) for t in ts) for w in words) / len(words)
 
 
+_KW_VER = hashlib.sha256(llm.KW_PROMPT.encode()).hexdigest()[:8]  # новый промпт = новый кэш
+
+
 def _rewrite(question, lang):
     """Юридические ключевые слова от ИИ; кэшируются, чтобы повтор давал те же источники."""
     if llm.PROVIDER == "mock":
         return None, {"input_tokens": 0, "output_tokens": 0}
-    k = hashlib.sha256(f"{llm.PROVIDER}|{lang}|{question}".encode()).hexdigest()
+    k = hashlib.sha256(f"{llm.PROVIDER}|{lang}|{question}|{_KW_VER}".encode()).hexdigest()
     with _lock:
         c = _store(); r = c.execute("SELECT v FROM rewrites WHERE k=?", (k,)).fetchone(); c.close()
     if r:
@@ -145,13 +149,34 @@ def _rewrite(question, lang):
     return text, usage
 
 
-def retrieve(question, lang, rewritten, k, as_of=None):
+# Слова-признаки «специальной» нормы (особая категория людей). Если в вопросе такой категории нет,
+# общая статья должна стоять выше специальной: «отпуск» -> ст. 217, а не статья про надомников.
+SPECIAL = ["kasanach", "oʻrindosh", "orindosh", "nogironl", "yoshgacha", "voyaga yetmag", "homilador",
+           "mavsumiy", "vaqtinchalik xodim", "xizmatchi", "harbiy", "chet el fuqaro", "pensioner", "talaba",
+           "надомн", "совместител", "инвалид", "несовершеннолет", "беремен", "сезонн", "временных работ",
+           "служащ", "военнослуж", "иностран", "пенсионер", "студент"]
+
+
+def _special_penalty(row, question, rewritten):
+    h = norm(row["heading"] or "")
+    q = norm(question + " " + (rewritten or ""))
+    for w in SPECIAL:
+        w = norm(w)
+        if w in h and w[:5] not in q:
+            return 0.85
+    return 1.0
+
+
+def _search(q, lang):
+    return list(db.search_articles(q, lang, limit=50, active_only=True, count=False)[0]) if q else []
+
+
+def retrieve(question, lang, rewritten, k, as_of=None, orig_rows=None):
     cands = {}
     for q, weight in ((rewritten, 1.0), (question, 0.9)):
         if not q:
             continue
-        rows, total = db.search_articles(q, lang, limit=50, active_only=True)
-        rows = list(rows)
+        rows = orig_rows if (q is question and orig_rows is not None) else _search(q, lang)
         if not rows:
             continue
         best = -rows[0]["score"] if rows[0]["score"] < 0 else 1.0
@@ -168,6 +193,7 @@ def retrieve(question, lang, rewritten, k, as_of=None):
         cov = (0.6 * _cover(r, t_new) + 0.4 * _cover(r, t_orig)) if t_new else _cover(r, t_orig)
         hp = max(_head_precision(r, t_new), _head_precision(r, t_orig))
         sc = 0.55 * cov + 0.15 * hp + 0.3 * rs
+        sc *= _special_penalty(r, question, rewritten)
         if r["amending"]:          # акты «о внесении изменений» — не основной текст нормы
             sc *= 0.6
         if r["form"] in ("Кодекс", "Конституция"):
@@ -216,6 +242,8 @@ def _llm_text(system, user, small=False, json_mode=False, temperature=0, seed=No
                   messages=[{"role": "system", "content": system}, {"role": "user", "content": user}])
         if json_mode:
             kw["response_format"] = {"type": "json_object"}
+        if small:
+            kw["max_tokens"] = 80      # ключевые слова короткие: меньше ждать
         if seed is not None:
             kw["seed"] = seed
         try:
@@ -349,8 +377,10 @@ def answer_item(item, opts):
     top_k = int(opts.get("top_k") or 5)
     try:
         tr = time.time()
+        f_orig = _search_pool.submit(_search, q_search, lang)   # поиск по исходному вопросу идёт параллельно
         rewritten, u1 = _rewrite(q_search, lang)
-        ctxs, retrieved_total = retrieve(q_search, lang, rewritten, max(top_k, GEN_CONTEXTS), opts.get("as_of_date"))
+        ctxs, retrieved_total = retrieve(q_search, lang, rewritten, max(top_k, GEN_CONTEXTS), opts.get("as_of_date"),
+                                         orig_rows=f_orig.result())
         t_ret = int((time.time() - tr) * 1000)
     except Exception as e:
         res.update(status="error", error={"code": "RETRIEVAL_FAILED", "message": str(e)[:300], "retryable": True})

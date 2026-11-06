@@ -67,7 +67,7 @@ def catalog(lang, form=None, status="active", year=None, q=None, page=1, per=30)
     return rows, total
 
 
-def search_articles(q, lang, limit=20, offset=0, active_only=False, key=None, mode="OR"):
+def search_articles(q, lang, limit=20, offset=0, active_only=False, key=None, mode="OR", count=True):
     fq = fts_query(q, mode)
     if not fq:
         return [], 0
@@ -79,7 +79,8 @@ def search_articles(q, lang, limit=20, offset=0, active_only=False, key=None, mo
         where += " AND a.key=?"; args.append(int(key))
     base = (f"FROM art_fts JOIN articles a ON a.id=art_fts.rowid "
             f"JOIN docs d ON d.key=a.key AND d.lang=a.lang WHERE {where}")
-    total = conn().execute(f"SELECT count(*) {base}", args).fetchone()[0]
+    # count(*) — лишний полный проход по совпадениям; для ИИ-поиска он не нужен
+    total = conn().execute(f"SELECT count(*) {base}", args).fetchone()[0] if count else None
     rows = conn().execute(
         f"SELECT a.*, d.title doc_title, d.form, d.date, d.number, d.active, d.status_warning, d.amending, d.doc_status, d.edition_date, "
         f"snippet(art_fts, 1, '[[', ']]', ' … ', 28) snip, "
