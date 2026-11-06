@@ -28,6 +28,17 @@ TZ = dt.timezone(dt.timedelta(hours=5))
 LANGS = ("uz-Latn", "uz-Cyrl", "ru")
 
 router = APIRouter(prefix="/v1")
+
+
+def _warm():
+    try:
+        for l in ("uz", "ru"):
+            db.code_chapters(l)
+    except Exception:
+        pass
+
+
+threading.Thread(target=_warm, daemon=True).start()   # индекс глав готовится сразу при запуске сайта
 _pool = cf.ThreadPoolExecutor(max_workers=WORKERS)
 _batch_pool = cf.ThreadPoolExecutor(max_workers=4)
 _lock = threading.Lock()
@@ -116,7 +127,31 @@ def _cover(row, ts):
     if not ts:
         return 0.0
     h, t, d = norm(row["heading"]), norm(row["text"]), norm(row["doc_title"])
-    return sum(1.0 if w in h else (0.6 if w in t else (0.5 if w in d else 0.0)) for w in ts) / len(ts)
+    c = norm(row["chapter"] or "") if "chapter" in row.keys() else ""
+    return sum(1.0 if w in h else (0.7 if w in c else (0.6 if w in t else (0.5 if w in d else 0.0))) for w in ts) / len(ts)
+
+
+CHAPTER_TOP = 3        # сколько глав кодексов добавить в кандидаты
+CHAPTER_MAX_ART = 40   # и не больше стольких статей из них
+
+
+def chapter_candidates(ts, lang):
+    """Статьи из глав кодексов, в названии которых есть слова вопроса. Так находится, например,
+    «258-modda. Soliq stavkalari» из раздела «Qoʻshilgan qiymat soligʻi», хотя в самой статье слова QQS нет."""
+    if len(ts) < 2:
+        return []
+    scored = []
+    for chap, ids in db.code_chapters(lang):
+        hit = sum(1 for w in ts if w in chap)
+        if hit >= 2:
+            scored.append((hit / len(ts), -len(ids), chap, ids))
+    scored.sort(reverse=True)
+    ids = []
+    for cov, _, _, a in scored[:CHAPTER_TOP]:
+        if cov < 0.4:
+            break
+        ids += a
+    return db.articles_by_ids(ids[:CHAPTER_MAX_ART])
 
 
 def _head_precision(row, ts):
@@ -229,6 +264,9 @@ W_COV, W_HP, W_RS = 0.35, 0.25, 0.4   # вес: покрытие слов воп
 def retrieve(question, lang, rewritten, k, as_of=None, orig_rows=None):
     cands = {}
     hinted = code_keys(question)
+    ts_all = list(dict.fromkeys(terms(rewritten or "") + terms(question)))
+    for r in chapter_candidates(ts_all, lang):
+        cands.setdefault(r["id"], (r, 0.5))
     for key in hinted:   # статьи названного кодекса попадают в кандидаты, даже если общий поиск их не нашёл
         rows = db.search_articles(rewritten or question, lang, limit=15, active_only=True, key=key, count=False)[0]
         if rows:
