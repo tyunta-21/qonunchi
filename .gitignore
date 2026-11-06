@@ -6,3 +6,4 @@ data/*.db
 data/*.db-*
 eval/runs/
 *.zip
+eval/compare/
