@@ -6,7 +6,7 @@
 
 Создаёт eval/runs/<run_id>/report.html и открывает его в браузере.
 """
-import csv, glob, html, json, os, sys, webbrowser
+import csv, glob, html, json, os, subprocess, sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 TARGETS = [  # ключ, название, цель, «больше лучше»
@@ -104,7 +104,11 @@ def main():
     out = os.path.join(run_dir, "report.html")
     open(out, "w", encoding="utf-8").write(page)
     print("Otchyot:", out)
-    webbrowser.open("file://" + os.path.abspath(out))
+    try:  # на Mac просто «open», без модуля webbrowser (в Python 3.15 с Homebrew он падает)
+        cmd = ["open"] if sys.platform == "darwin" else (["start", ""] if os.name == "nt" else ["xdg-open"])
+        subprocess.run(cmd + [os.path.abspath(out)], check=False, shell=os.name == "nt")
+    except Exception:
+        print("Oching:", out)
 
 
 TEMPLATE = """<!doctype html><html lang="uz"><head><meta charset="utf-8">
