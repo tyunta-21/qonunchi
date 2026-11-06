@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}{{ q }}{% endblock %}
+{% block content %}
+<div class="crumbs"><a href="/{{ lang }}/">{{ t.nav_home }}</a> › {{ t.results_for }}: «{{ q }}»</div>
+<form class="big-search inline" action="/{{ lang }}/search">
+  <input name="q" value="{{ q }}" placeholder="{{ t.search_ph }}">
+  <label class="chk"><input type="checkbox" name="active" value="1" {{ 'checked' if active }}> {{ t.only_active }}</label>
+  <button>{{ t.search_btn }}</button>
+</form>
+{% if q %}
+<a class="ask-strip" href="/{{ lang }}/assistant?q={{ q|urlencode }}">✦ {{ t.ai_card_title }} <b>{{ t.ai_card_btn }} →</b></a>
+{% endif %}
+{% if docs %}
+<section class="panel">
+  <h2 class="ptitle">{{ t.docs_found }}</h2>
+  <ul class="doclist compact">
+    {% for d in docs %}<li><span class="tag">{{ forms.get(d.form, d.form) }}</span> <a href="/{{ lang }}/doc/{{ d.key }}">{{ d.title }}</a>
+      {% if not d.active %}<span class="badge off">{{ t.inactive_badge }}</span>{% endif %}<span class="meta">{{ d.number }} {{ d.date }}</span></li>{% endfor %}
+  </ul>
+</section>
+{% endif %}
+<section class="panel">
+  <h2 class="ptitle">{{ t.arts_found }} <span class="count">{{ t.found }}: {{ total }}</span></h2>
+  {% if q and not rows %}<p class="empty">{{ t.nothing }}</p>{% endif %}
+  <ul class="hits">
+    {% for r in rows %}
+    <li>
+      <a class="hit-title" href="/{{ lang }}/doc/{{ r.key }}?q={{ q|urlencode }}#a{{ r.id }}">{{ r.heading }}</a>
+      <div class="hit-doc">{{ r.doc_title }} · {{ r.date }} {% if not r.active %}<span class="badge off">{{ t.inactive_badge }}</span>{% endif %}</div>
+      <p>{{ r.snip | snip }}</p>
+    </li>
+    {% endfor %}
+  </ul>
+  {% include "_pager.html" %}
+</section>
+{% endblock %}

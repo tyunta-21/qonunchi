@@ -1,0 +1,8 @@
+{% if pages > 1 %}
+{% set qs = request.query_params %}
+<nav class="pager">
+  {% if page > 1 %}<a href="?{% for k,v in qs.items() if k!='page' %}{{ k }}={{ v|urlencode }}&{% endfor %}page={{ page-1 }}">← {{ t.prev }}</a>{% endif %}
+  <span>{{ t.page }} {{ page }} / {{ pages }}</span>
+  {% if page < pages %}<a href="?{% for k,v in qs.items() if k!='page' %}{{ k }}={{ v|urlencode }}&{% endfor %}page={{ page+1 }}">{{ t.next }} →</a>{% endif %}
+</nav>
+{% endif %}

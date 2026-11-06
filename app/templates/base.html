@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="{{ lang }}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}Qonunchi{% endblock %} — Qonunchi</title>
+<link rel="icon" href="/static/logo.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/static/style.css?v=3">
+</head>
+<body data-lang="{{ lang }}" data-mode="{{ provider }}">
+<div class="topbar">
+  <div class="wrap topbar-in">
+    <span class="topbar-note">{{ t.unofficial }}</span>
+    <div class="langs">
+      {% set p = path[3:] %}
+      <a href="/uz{{ p }}{% if request.url.query %}?{{ request.url.query }}{% endif %}" class="{{ 'on' if lang=='uz' }}">Oʻzbekcha</a>
+      <a href="/ru{{ p }}{% if request.url.query %}?{{ request.url.query }}{% endif %}" class="{{ 'on' if lang=='ru' }}">Русский</a>
+    </div>
+  </div>
+</div>
+<header class="head">
+  <div class="wrap head-in">
+    <a class="brand" href="/{{ lang }}/">
+      <img src="/static/logo.svg" alt="" width="54" height="54">
+      <span><b>Qonunchi</b><small>{{ t.tagline }}</small></span>
+    </a>
+    <form class="head-search" action="/{{ lang }}/search">
+      <input name="q" value="{{ q or '' }}" placeholder="{{ t.search_ph }}" aria-label="{{ t.search_btn }}">
+      <button>{{ t.search_btn }}</button>
+    </form>
+  </div>
+</header>
+<nav class="mainnav">
+  <div class="wrap nav-in">
+    <a href="/{{ lang }}/" class="{{ 'on' if path == '/'+lang+'/' }}">{{ t.nav_home }}</a>
+    <a href="/{{ lang }}/catalog" class="{{ 'on' if 'catalog' in path and not request.query_params.get('form') }}">{{ t.nav_catalog }}</a>
+    <a href="/{{ lang }}/catalog?form=Кодекс" class="{{ 'on' if request.query_params.get('form')=='Кодекс' }}">{{ t.nav_codes }}</a>
+    <a href="/{{ lang }}/catalog?form=Закон" class="{{ 'on' if request.query_params.get('form')=='Закон' }}">{{ forms['Закон'] }}</a>
+    <a href="/{{ lang }}/assistant" class="ai-link {{ 'on' if 'assistant' in path }}">✦ {{ t.nav_ai }}</a>
+  </div>
+</nav>
+<main class="wrap main">{% block content %}{% endblock %}</main>
+<footer class="foot">
+  <div class="wrap foot-in">
+    <div class="foot-brand"><img src="/static/logo.svg" alt="" width="34" height="34"> <b>Qonunchi</b></div>
+    <p>{{ t.footer_note }}</p>
+  </div>
+</footer>
+{% if 'assistant' not in path %}
+<button class="chat-fab" id="chatFab" aria-label="{{ t.nav_ai }}"><span>✦</span> {{ t.nav_ai }}</button>
+<section class="chat-panel" id="chatPanel" hidden>
+  <div class="chat-head">
+    <b>✦ {{ t.ai_title }}</b>
+    <span><a href="/{{ lang }}/assistant">{{ t.open_full }}</a><button class="x" id="chatClose" aria-label="close">×</button></span>
+  </div>
+  {% include "_chat.html" %}
+</section>
+{% endif %}
+<script>window.T = {{ t | tojson }};</script>
+<script src="/static/chat.js?v=3"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

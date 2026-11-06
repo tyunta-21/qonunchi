@@ -1,0 +1,8 @@
+.env
+.venv/
+__pycache__/
+data/*.tmp
+data/*.db
+data/*.db-*
+eval/runs/
+*.zip

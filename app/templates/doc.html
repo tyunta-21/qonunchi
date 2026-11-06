@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}{{ d.title }}{% endblock %}
+{% block content %}
+<div class="crumbs"><a href="/{{ lang }}/">{{ t.nav_home }}</a> › <a href="/{{ lang }}/catalog?form={{ d.form }}">{{ forms.get(d.form, d.form) }}</a> › {{ d.number or d.date }}</div>
+<div class="doc-layout">
+  <aside class="toc panel">
+    <h2 class="ptitle">{{ t.contents }}</h2>
+    <input class="toc-filter" placeholder="{{ t.find_in_doc }}" id="tocFilter" value="{{ q }}">
+    <div class="toc-list" id="tocList">
+      {% for g in toc %}
+        {% if g.chapter %}<div class="toc-ch">{{ g.chapter }}</div>{% endif %}
+        {% for a in g['items'] %}<a href="#a{{ a.id }}" data-id="{{ a.id }}">{{ a.heading }}</a>{% endfor %}
+      {% endfor %}
+    </div>
+  </aside>
+  <article class="doc panel">
+    <div class="doc-head">
+      <span class="tag">{{ forms.get(d.form, d.form) }}</span>
+      {% if d.active %}<span class="badge on">{{ t.active_badge }}</span>{% else %}<span class="badge off">{{ t.inactive_badge }}</span>{% endif %}
+      <h1>{{ d.title }}</h1>
+      <dl class="props">
+        {% if d.number %}<div><dt>{{ t.number }}</dt><dd>{{ d.number }}</dd></div>{% endif %}
+        <div><dt>{{ t.date }}</dt><dd>{{ d.date }}</dd></div>
+        {% if d.effective_date %}<div><dt>{{ t.effective }}</dt><dd>{{ d.effective_date }}</dd></div>{% endif %}
+        <div><dt>{{ t.lang_versions }}</dt><dd>{% for l in langs %}<a href="/{{ l }}/doc/{{ d.key }}" class="{{ 'on' if l==lang }}">{{ 'Oʻzbekcha' if l=='uz' else 'Русский' }}</a>{% endfor %}</dd></div>
+      </dl>
+      {% if d.status_warning %}<div class="warn">⚠ {{ d.status_warning }}</div>{% endif %}
+      <div class="doc-actions">
+        <a class="btn" href="/{{ lang }}/assistant?doc={{ d.key }}&q={{ (('Ushbu hujjat haqida: ' if lang=='uz' else 'Вопрос о документе: ') ~ d.title)|urlencode }}">✦ {{ t.ask_about_doc }}</a>
+        {% if d.src_url %}<a class="btn ghost" href="{{ d.src_url }}" target="_blank" rel="noopener">{{ t.original }} ↗</a>{% endif %}
+      </div>
+    </div>
+    <div class="doc-body">
+      {% set ns = namespace(ch='') %}
+      {% for a in arts %}
+        {% if a.chapter and a.chapter != ns.ch %}{% set ns.ch = a.chapter %}<h2 class="chapter">{{ a.chapter }}</h2>{% endif %}
+        <section class="art" id="a{{ a.id }}">
+          <h3>{{ a.heading }} <a class="anchor" href="#a{{ a.id }}" title="#">#</a></h3>
+          {{ a.text | paras }}
+        </section>
+      {% endfor %}
+    </div>
+  </article>
+</div>
+{% endblock %}
+{% block scripts %}<script src="/static/doc.js?v=3"></script>{% endblock %}

@@ -1,0 +1,11 @@
+id,batch,category,question,expected_answer,expected_doc_id,expected_article,answerable
+q001,b01,faktik,"Yillik asosiy mehnat ta'tilining eng kam muddati qancha?","21 kalendar kuni",lex:6257288,217-modda,true
+q002,b01,rus,"Какой срок исковой давности установлен Гражданским кодексом?","три года",lex:111189,150-modda,true
+q003,b01,kirill,"Йиллик асосий меҳнат таътилининг энг кам муддати қанча?","21 кун",lex:6257288,217-modda,true
+q004,b01,faktik,"Nikoh yoshi necha yosh?","18 yosh",lex:104720,15-modda,true
+q005,b01,rus,"Какое наказание за кражу?","",lex:111453,169-modda,true
+q006,b01,faktik,"Ishdan bo'shatilganda qanday nafaqa to'lanadi?","",lex:6257288,173-modda,true
+q007,b01,raqam,"Voyaga yetmagan bolaga aliment miqdori qancha?","",lex:104720,99-modda,true
+q008,b01,ogzaki,"Ishxonam meni sababsiz haydab yubordi, nima qilay?","",lex:6257288,,true
+q009,b01,javobsiz,"Plovni qanday tayyorlash kerak?","",,,false
+q010,b01,javobsiz,"Какая погода будет завтра в Ташкенте?","",,,false

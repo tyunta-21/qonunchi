@@ -1,0 +1,13 @@
+<div class="chat" data-chat>
+  <div class="chat-log" data-log>
+    <div class="msg bot"><div class="bubble">{{ t.ai_hello }}</div></div>
+    {% if provider == 'mock' %}<div class="mock-note">{{ t.ai_mock }}</div>{% endif %}
+    <div class="examples" data-examples>
+      {% for e in t.ai_examples %}<button type="button" class="ex">{{ e }}</button>{% endfor %}
+    </div>
+  </div>
+  <form class="chat-form" data-form>
+    <textarea rows="1" placeholder="{{ t.ai_ph }}" data-input maxlength="1500"></textarea>
+    <button class="send" aria-label="{{ t.ai_send }}">➤</button>
+  </form>
+</div>

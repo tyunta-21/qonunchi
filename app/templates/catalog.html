@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}{{ t.nav_catalog }}{% endblock %}
+{% block content %}
+<div class="crumbs"><a href="/{{ lang }}/">{{ t.nav_home }}</a> › {{ t.nav_catalog }}</div>
+<div class="layout">
+  <aside class="filters panel">
+    <form>
+      <label>{{ t.search_btn }}<input name="q" value="{{ q }}" placeholder="{{ t.search_ph }}"></label>
+      <label>{{ t.filter_type }}
+        <select name="form"><option value="">{{ t.any }}</option>
+          {% for f in ['Конституция','Кодекс','Закон'] %}<option value="{{ f }}" {{ 'selected' if f==f_form }}>{{ forms[f] }}</option>{% endfor %}
+        </select></label>
+      <label>{{ t.filter_status }}
+        <select name="status">
+          <option value="active" {{ 'selected' if f_status=='active' }}>{{ t.st_active }}</option>
+          <option value="inactive" {{ 'selected' if f_status=='inactive' }}>{{ t.st_inactive }}</option>
+          <option value="all" {{ 'selected' if f_status=='all' }}>{{ t.st_all }}</option>
+        </select></label>
+      <label>{{ t.filter_year }}
+        <select name="year"><option value="">{{ t.any }}</option>
+          {% for y in years %}<option {{ 'selected' if y|string==f_year }}>{{ y }}</option>{% endfor %}
+        </select></label>
+      <button class="btn">{{ t.apply }}</button>
+    </form>
+  </aside>
+  <section class="panel grow">
+    <h1 class="ptitle">{{ forms.get(f_form, t.nav_catalog) if f_form else t.nav_catalog }} <span class="count">{{ t.found }}: {{ total }}</span></h1>
+    {% if not rows %}<p class="empty">{{ t.nothing }}</p>{% endif %}
+    <ul class="doclist">
+      {% for d in rows %}
+      <li>
+        <div class="dl-top"><span class="tag">{{ forms.get(d.form, d.form) }}</span>
+          {% if not d.active %}<span class="badge off">{{ t.inactive_badge }}</span>{% endif %}
+          <span class="meta">{{ d.number }} {{ d.date }}</span></div>
+        <a href="/{{ lang }}/doc/{{ d.key }}">{{ d.title }}</a>
+      </li>
+      {% endfor %}
+    </ul>
+    {% include "_pager.html" %}
+  </section>
+</div>
+{% endblock %}

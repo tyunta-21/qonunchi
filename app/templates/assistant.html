@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}{{ t.ai_title }}{% endblock %}
+{% block content %}
+<div class="crumbs"><a href="/{{ lang }}/">{{ t.nav_home }}</a> › {{ t.ai_title }}</div>
+<section class="panel assistant">
+  <div class="assist-head">
+    <h1 class="ptitle">✦ {{ t.ai_title }}</h1>
+    <button class="btn ghost" type="button" id="newChat">{{ t.new_chat }}</button>
+  </div>
+  {% include "_chat.html" %}
+</section>
+{% endblock %}

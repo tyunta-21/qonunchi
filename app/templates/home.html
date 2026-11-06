@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}{{ t.nav_home }}{% endblock %}
+{% block content %}
+<section class="hero">
+  <div>
+    <h1>{{ t.hero_title }}</h1>
+    <p>{{ t.hero_sub }}</p>
+    <form class="big-search" action="/{{ lang }}/search">
+      <input name="q" placeholder="{{ t.search_ph }}" autofocus>
+      <button>{{ t.search_btn }}</button>
+    </form>
+    <div class="stats">
+      <span><b>{{ "{:,}".format(stats.docs).replace(",", " ") }}</b> {{ t.stat_docs }}</span>
+      <span><b>{{ "{:,}".format(stats.articles).replace(",", " ") }}</b> {{ t.stat_arts }}</span>
+      <span>{{ t.updated }}: {{ stats.built }}</span>
+    </div>
+  </div>
+  <a class="ai-card" href="/{{ lang }}/assistant">
+    <span class="ai-ico">✦</span>
+    <h2>{{ t.ai_card_title }}</h2>
+    <p>{{ t.ai_card_text }}</p>
+    <span class="btn">{{ t.ai_card_btn }} →</span>
+  </a>
+</section>
+
+<div class="cols">
+  <section class="panel">
+    <h2 class="ptitle">{{ t.codes_title }}</h2>
+    <ul class="doclist compact">
+      {% for d in codes %}
+      <li><a href="/{{ lang }}/doc/{{ d.key }}">{{ d.title }}</a><span class="meta">{{ d.date }} · {{ d.n_articles }} {{ t.stat_arts }}</span></li>
+      {% endfor %}
+    </ul>
+  </section>
+  <section class="panel">
+    <h2 class="ptitle">{{ t.latest_title }}</h2>
+    <ul class="doclist compact">
+      {% for d in latest %}
+      <li><span class="tag">{{ forms.get(d.form, d.form) }}</span> <a href="/{{ lang }}/doc/{{ d.key }}">{{ d.title }}</a><span class="meta">{{ d.number }} {{ d.date }}</span></li>
+      {% endfor %}
+    </ul>
+    <a class="more" href="/{{ lang }}/catalog">{{ t.all_docs }} →</a>
+    <h2 class="ptitle" style="margin-top:22px">{{ t.filter_type }}</h2>
+    <div class="formtiles">
+      {% for f in ['Конституция','Кодекс','Закон'] %}
+      <a href="/{{ lang }}/catalog?form={{ f }}&status=all"><b>{{ stats.by_form.get(f, 0) }}</b>{{ forms[f] }}</a>
+      {% endfor %}
+    </div>
+  </section>
+</div>
+{% endblock %}
