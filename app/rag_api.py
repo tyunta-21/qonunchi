@@ -15,7 +15,7 @@ from . import db, llm
 from .textnorm import norm, terms
 from .translit import detect, cyr_to_lat, db_lang
 
-PIPELINE_VERSION = "0.1.0"
+PIPELINE_VERSION = "0.2.0"
 SYNC_TIMEOUT = float(os.environ.get("RAG_SYNC_TIMEOUT", "110"))
 ITEM_TIMEOUT = float(os.environ.get("RAG_ITEM_TIMEOUT", "60"))
 WORKERS = int(os.environ.get("RAG_WORKERS", "10"))
@@ -72,7 +72,7 @@ def system_obj():
     model = {"openai": llm.OPENAI_MODEL, "claude": llm.CLAUDE_MODEL}.get(llm.PROVIDER, "mock-extractive")
     return {"pipeline_version": PIPELINE_VERSION, "llm_model": model, "llm_provider": llm.PROVIDER,
             "embedding_model": None, "retriever": "sqlite-fts5-bm25 + llm-query-rewrite",
-            "reranker": "term-coverage-v1", **index_info()}
+            "reranker": "term-coverage-v2 + llm-citation-first", **index_info()}
 
 
 # ---------------------------------------------------------------- авторизация, лимиты
@@ -151,9 +151,9 @@ def _rewrite(question, lang):
 
 # Слова-признаки «специальной» нормы (особая категория людей). Если в вопросе такой категории нет,
 # общая статья должна стоять выше специальной: «отпуск» -> ст. 217, а не статья про надомников.
-SPECIAL = ["kasanach", "oʻrindosh", "orindosh", "nogironl", "yoshgacha", "voyaga yetmag", "homilador",
+SPECIAL = ["kasanach", "oʻrindosh", "orindosh", "nogironl", "homilador",
            "mavsumiy", "vaqtinchalik xodim", "xizmatchi", "harbiy", "chet el fuqaro", "pensioner", "talaba",
-           "надомн", "совместител", "инвалид", "несовершеннолет", "беремен", "сезонн", "временных работ",
+           "надомн", "совместител", "инвалид", "беремен", "сезонн", "временных работ",
            "служащ", "военнослуж", "иностран", "пенсионер", "студент"]
 
 
@@ -169,6 +169,31 @@ def _special_penalty(row, question, rewritten):
 
 def _search(q, lang):
     return list(db.search_articles(q, lang, limit=50, active_only=True, count=False)[0]) if q else []
+
+
+# Сокращения и разговорные слова -> термины закона. Добавляются к вопросу перед поиском
+# (дёшево и детерминированно; ИИ-переписывание запроса идёт отдельно).
+EXPAND = [
+    (r"\bqqs\b", "qoʻshilgan qiymat soligʻi"), (r"\bндс\b", "налог на добавленную стоимость"),
+    (r"\bjshds\b", "jismoniy shaxslardan olinadigan daromad soligʻi"), (r"\bндфл\b", "налог на доходы физических лиц"),
+    (r"\bbhm\b", "bazaviy hisoblash miqdori"), (r"\bбрв\b", "базовая расчетная величина"),
+    (r"\bfhdy\b|\bzags\b|\bзагс\b", "fuqarolik holati dalolatnomalarini qayd etish organlari"),
+    (r"\botpusk\w*", "mehnat taʼtili"), (r"\bdekret\w*", "homiladorlik va tugʻish taʼtili bola parvarishlash taʼtili"),
+    (r"\bogʻirlik\b|\bo['ʻ‘]?g['ʻ‘]?irlik\b", "oʻgʻrilik"), (r"\bishdan ket\w*", "mehnat shartnomasini xodimning tashabbusiga koʻra bekor qilish"),
+    (r"\bishdan (boʻshat|bo'shat|boshat)\w*", "mehnat shartnomasini ish beruvchining tashabbusiga koʻra bekor qilish"),
+    (r"\bshanba\b|\byakshanba\b|\bvыходн\w*", "dam olish kunlari"), (r"\bвыходн\w*", "выходные дни"),
+    (r"\bqarz\w*.*\bsudga\b|\bsudga\b.*\bqarz\w*", "daʼvo muddati"),
+    (r"\bo['ʻ‘]?lim jazosi\b|\bсмертн\w* казн\w*", "oʻlim jazosi taqiqlanadi"),
+]
+
+
+def expand(q):
+    low = q.lower()
+    add = [rep for pat, rep in EXPAND if re.search(pat, low)]
+    return (q + " " + " ".join(add)) if add else q
+
+
+W_COV, W_HP, W_RS = 0.35, 0.25, 0.4   # вес: покрытие слов вопроса, точность заголовка, балл BM25
 
 
 def retrieve(question, lang, rewritten, k, as_of=None, orig_rows=None):
@@ -192,7 +217,7 @@ def retrieve(question, lang, rewritten, k, as_of=None, orig_rows=None):
     for r, rs in cands.values():
         cov = (0.6 * _cover(r, t_new) + 0.4 * _cover(r, t_orig)) if t_new else _cover(r, t_orig)
         hp = max(_head_precision(r, t_new), _head_precision(r, t_orig))
-        sc = 0.55 * cov + 0.15 * hp + 0.3 * rs
+        sc = W_COV * cov + W_HP * hp + W_RS * rs
         sc *= _special_penalty(r, question, rewritten)
         if r["amending"]:          # акты «о внесении изменений» — не основной текст нормы
             sc *= 0.6
@@ -377,6 +402,7 @@ def answer_item(item, opts):
     top_k = int(opts.get("top_k") or 5)
     try:
         tr = time.time()
+        q_search = expand(q_search)
         f_orig = _search_pool.submit(_search, q_search, lang)   # поиск по исходному вопросу идёт параллельно
         rewritten, u1 = _rewrite(q_search, lang)
         ctxs, retrieved_total = retrieve(q_search, lang, rewritten, max(top_k, GEN_CONTEXTS), opts.get("as_of_date"),
@@ -415,8 +441,12 @@ def answer_item(item, opts):
             continue
         if 1 <= ref <= len(ctxs) and ref not in cited_refs:
             cited_refs.append(ref)
-    used_text = set(int(x) for x in re.findall(r"\[(\d+)\]", out.get("answer") or "") if 0 < int(x) <= len(ctxs))
-    keep = list(range(1, min(top_k, len(ctxs)) + 1)) + [r for r in sorted(set(cited_refs) | used_text) if r > top_k]
+    used_text = [int(x) for x in re.findall(r"\[(\d+)\]", out.get("answer") or "") if 0 < int(x) <= len(ctxs)]
+    # Порядок контекстов: сначала статьи, на которые опирается ответ (модель прочитала все кандидаты и выбрала
+    # нужные: это и есть переранжирование), потом остальные по баллу поиска. Всего не меньше top_k.
+    first = [] if out.get("no_answer") else list(dict.fromkeys(used_text + cited_refs))
+    rest = [r for r in range(1, len(ctxs) + 1) if r not in first]
+    keep = first + rest[: max(0, top_k - len(first))]
     renum = {old: new for new, old in enumerate(keep, 1)}
 
     citations = []
@@ -455,7 +485,8 @@ def answer_item(item, opts):
         sc, rs, r = ctxs[old - 1]
         cid = _chunk_id(r)
         ctx = {"rank": rank, "chunk_id": cid, "doc_id": f"lex:{r['key']}", "doc_title": r["doc_title"],
-               "article": _art_label(r), "url": r["src_url"], "retrieval_score": rs, "rerank_score": sc,
+               "article": _art_label(r), "url": r["src_url"], "retrieval_score": rs,
+               "rerank_score": 1.0 if old in first else sc,
                "used_in_answer": cid in cited_ids}
         if opts.get("return_contexts", True):
             ctx["text"] = clean(r["text"])
