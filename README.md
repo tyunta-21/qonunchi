@@ -1,5 +1,29 @@
 # Qonunchi — сайт законов Узбекистана с ИИ-помощником
 
+![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-ASGI-009688?logo=fastapi&logoColor=white)
+![SQLite FTS5](https://img.shields.io/badge/SQLite-FTS5%20BM25-003B57?logo=sqlite&logoColor=white)
+![OpenAI](https://img.shields.io/badge/LLM-gpt--4.1--mini-412991?logo=openai&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-ready-2496ED?logo=docker&logoColor=white)
+
+**Для кого:** для людей, которые не знают законов и юридического языка, но хотят понять свои права. Человек спрашивает простыми словами на узбекском или русском, а ИИ-юрист отвечает **только по тексту действующих статей** из lex.uz и на каждое утверждение ставит ссылку с дословной цитатой.
+
+```mermaid
+flowchart LR
+    U(["Пользователь"]) --> W["FastAPI<br/>сайт + RAG API"]
+    W --> N["Язык и нормализация<br/>uz-Latn / uz-Cyrl / ru"]
+    N --> K["LLM: вопрос →<br/>юридические термины"]
+    N --> S[("SQLite FTS5<br/>BM25, ~32 000 статей")]
+    K --> S
+    S --> R["Гибридное<br/>ранжирование"]
+    R --> G["LLM: ответ по статьям<br/>JSON + цитаты"]
+    G --> V["Проверка цитат<br/>по тексту закона"]
+    V --> U
+```
+
+📐 **Подробно:** [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) (диаграммы, модули, схема БД, ранжирование, защита от выдуманных ответов) и [docs/adr](docs/adr/) (почему выбраны именно такие решения).
+
+
 Что есть на сайте:
 
 - **Главная**: поиск, Конституция и все кодексы, новые законы.
@@ -68,10 +92,26 @@ python eval/run_eval.py eval/sample_testset.csv --url http://localhost:8000 --ke
 
 ## Устройство (для программиста)
 
-- `build_db.py` — собирает JSON из `lexuz/data/docs/{ru,uz}` в SQLite с полнотекстовым поиском FTS5.
-- `app/main.py` — сайт (FastAPI + шаблоны Jinja2), `/api/chat` — ИИ-помощник.
-- `app/db.py` — каталог, поиск, подбор статей для бота.
-- `app/llm.py` — подключение к OpenAI / Claude / тестовый режим. Сначала ИИ переводит бытовой вопрос в юридические слова для поиска, затем отвечает по найденным статьям.
-- `app/rag_api.py` — RAG API /v1, `app/translit.py` — определение языка и кириллица → латиница.
-- `eval/run_eval.py` — прогон тестового набора и метрики.
+```
+qonunchi/
+├── app/                   online: веб-сайт и API (один процесс FastAPI)
+│   ├── main.py            сайт: страницы, /api/chat, лимит запросов
+│   ├── rag_api.py         RAG API /v1: батчи, ранжирование, проверка цитат
+│   ├── db.py              единственный доступ к laws.db: каталог, BM25-поиск
+│   ├── llm.py             OpenAI / Claude / тестовый режим, промпты
+│   ├── textnorm.py        нормализация текста, стемминг, FTS-запрос
+│   ├── translit.py        определение языка, кириллица → латиница
+│   ├── chunking.py        нарезка длинных актов на пункты
+│   ├── i18n.py            тексты интерфейса uz / ru
+│   ├── templates/         Jinja2-шаблоны страниц
+│   └── static/            CSS и JS (чат, навигация по документу)
+├── build_db.py            offline: JSONL с lex.uz → SQLite + FTS5
+├── rechunk_db.py          перенарезка готовой базы (с резервной копией)
+├── merge_and_build.py     добавление новых актов в базу
+├── eval/run_eval.py       метрики качества: Hit@5, MRR, no-answer, латентность
+├── docs/                  архитектура и ADR
+└── Dockerfile
+```
+
+- Архитектура, диаграммы и формула ранжирования: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 - Ограничение: `CHAT_LIMIT_PER_HOUR` вопросов в час с одного адреса.
