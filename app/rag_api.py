@@ -15,7 +15,7 @@ from . import db, llm
 from .textnorm import norm, terms
 from .translit import detect, cyr_to_lat, db_lang
 
-PIPELINE_VERSION = "0.1.0"
+PIPELINE_VERSION = "0.3.1"
 SYNC_TIMEOUT = float(os.environ.get("RAG_SYNC_TIMEOUT", "110"))
 ITEM_TIMEOUT = float(os.environ.get("RAG_ITEM_TIMEOUT", "60"))
 WORKERS = int(os.environ.get("RAG_WORKERS", "10"))
@@ -28,6 +28,17 @@ TZ = dt.timezone(dt.timedelta(hours=5))
 LANGS = ("uz-Latn", "uz-Cyrl", "ru")
 
 router = APIRouter(prefix="/v1")
+
+
+def _warm():
+    try:
+        for l in ("uz", "ru"):
+            db.code_chapters(l)
+    except Exception:
+        pass
+
+
+threading.Thread(target=_warm, daemon=True).start()   # индекс глав готовится сразу при запуске сайта
 _pool = cf.ThreadPoolExecutor(max_workers=WORKERS)
 _batch_pool = cf.ThreadPoolExecutor(max_workers=4)
 _lock = threading.Lock()
@@ -72,7 +83,7 @@ def system_obj():
     model = {"openai": llm.OPENAI_MODEL, "claude": llm.CLAUDE_MODEL}.get(llm.PROVIDER, "mock-extractive")
     return {"pipeline_version": PIPELINE_VERSION, "llm_model": model, "llm_provider": llm.PROVIDER,
             "embedding_model": None, "retriever": "sqlite-fts5-bm25 + llm-query-rewrite",
-            "reranker": "term-coverage-v1", **index_info()}
+            "reranker": "term-coverage-v2 + llm-citation-first", **index_info()}
 
 
 # ---------------------------------------------------------------- авторизация, лимиты
@@ -111,17 +122,53 @@ def _iso(d):
     return f"{m[3]}-{m[2]}-{m[1]}" if m else None
 
 
+_NUM_ONLY = re.compile(r"^\s*(Статья\s+)?[\d^¹²³.-]+(-modda)?\.?\s*$")
+
+
+def _heading(row):
+    """Заголовок статьи; у статей без названия (Конституция) — первое предложение текста."""
+    h = row["heading"] or ""
+    if _NUM_ONLY.match(h):
+        t = re.sub(r"\[Примечание:[^\]]*\]", "", row["text"] or "").strip()
+        h = h + " " + re.split(r"(?<=[.;:])\s", t, 1)[0][:160]
+    return h
+
+
 def _cover(row, ts):
     """Доля слов вопроса в заголовке статьи (1.0), тексте (0.6) или названии документа (0.5)."""
     if not ts:
         return 0.0
-    h, t, d = norm(row["heading"]), norm(row["text"]), norm(row["doc_title"])
-    return sum(1.0 if w in h else (0.6 if w in t else (0.5 if w in d else 0.0)) for w in ts) / len(ts)
+    h, t, d = norm(_heading(row)), norm(row["text"]), norm(row["doc_title"])
+    c = norm(row["chapter"] or "") if "chapter" in row.keys() else ""
+    return sum(1.0 if w in h else (0.7 if w in c else (0.6 if w in t else (0.5 if w in d else 0.0))) for w in ts) / len(ts)
+
+
+CHAPTER_TOP = 3        # сколько глав кодексов добавить в кандидаты
+CHAPTER_MAX_ART = 40   # и не больше стольких статей из них
+
+
+def chapter_candidates(ts, lang):
+    """Статьи из глав кодексов, в названии которых есть слова вопроса. Так находится, например,
+    «258-modda. Soliq stavkalari» из раздела «Qoʻshilgan qiymat soligʻi», хотя в самой статье слова QQS нет."""
+    if len(ts) < 2:
+        return []
+    scored = []
+    for chap, ids in db.code_chapters(lang):
+        hit = sum(1 for w in ts if w in chap)
+        if hit >= 2:
+            scored.append((hit / len(ts), -len(ids), chap, ids))
+    scored.sort(reverse=True)
+    ids = []
+    for cov, _, _, a in scored[:CHAPTER_TOP]:
+        if cov < 0.4:
+            break
+        ids += a
+    return db.articles_by_ids(ids[:CHAPTER_MAX_ART])
 
 
 def _head_precision(row, ts):
     """Доля слов заголовка статьи, совпавших со словами вопроса: короткий точный заголовок лучше длинного."""
-    words = [w for w in re.findall(r"\w+", norm(re.sub(r"^(Статья\s+)?[\d^¹²³.-]+(-modda)?\.?\s*", "", row["heading"] or "")))
+    words = [w for w in re.findall(r"\w+", norm(re.sub(r"^(Статья\s+)?[\d^¹²³.-]+(-modda)?\.?\s*", "", _heading(row))))
              if len(w) > 2]
     if not words or not ts:
         return 0.0
@@ -151,9 +198,9 @@ def _rewrite(question, lang):
 
 # Слова-признаки «специальной» нормы (особая категория людей). Если в вопросе такой категории нет,
 # общая статья должна стоять выше специальной: «отпуск» -> ст. 217, а не статья про надомников.
-SPECIAL = ["kasanach", "oʻrindosh", "orindosh", "nogironl", "yoshgacha", "voyaga yetmag", "homilador",
+SPECIAL = ["kasanach", "oʻrindosh", "orindosh", "nogironl", "homilador",
            "mavsumiy", "vaqtinchalik xodim", "xizmatchi", "harbiy", "chet el fuqaro", "pensioner", "talaba",
-           "надомн", "совместител", "инвалид", "несовершеннолет", "беремен", "сезонн", "временных работ",
+           "надомн", "совместител", "инвалид", "беремен", "сезонн", "временных работ",
            "служащ", "военнослуж", "иностран", "пенсионер", "студент"]
 
 
@@ -171,8 +218,103 @@ def _search(q, lang):
     return list(db.search_articles(q, lang, limit=50, active_only=True, count=False)[0]) if q else []
 
 
+# Сокращения и разговорные слова -> термины закона. Добавляются к вопросу перед поиском
+# (дёшево и детерминированно; ИИ-переписывание запроса идёт отдельно).
+EXPAND = [
+    (r"\bqqs\b", "qoʻshilgan qiymat soligʻi"), (r"\bндс\b", "налог на добавленную стоимость"),
+    (r"\bjshds\b", "jismoniy shaxslardan olinadigan daromad soligʻi"), (r"\bндфл\b", "налог на доходы физических лиц"),
+    (r"\bbhm\b", "bazaviy hisoblash miqdori"), (r"\bбрв\b", "базовая расчетная величина"),
+    (r"\bfhdy\b|\bzags\b|\bзагс\b", "fuqarolik holati dalolatnomalarini qayd etish organlari"),
+    (r"\botpusk\w*", "mehnat taʼtili"), (r"\bdekret\w*", "homiladorlik va tugʻish taʼtili bola parvarishlash taʼtili"),
+    (r"\bishdan ket\w*", "mehnat shartnomasini xodimning tashabbusiga koʻra bekor qilish"),
+    (r"\bishdan (boʻshat|bo'shat|boshat)\w*", "mehnat shartnomasini ish beruvchining tashabbusiga koʻra bekor qilish"),
+    (r"\bshanba\b|\byakshanba\b|\bvыходн\w*", "dam olish kunlari"), (r"\bвыходн\w*", "выходные дни"),
+    (r"\bqarz\w*.*\bsudga\b|\bsudga\b.*\bqarz\w*", "daʼvo muddati"),
+    (r"\bo['ʻ‘]?lim jazosi\b|\bсмертн\w* казн\w*", "oʻlim jazosi taqiqlanadi"),
+    (r"\bjazo turlari\b|\bjazo(ning)? turlari\b|\bвид\w* наказани\w*", "jazo tizimi asosiy jazolar"),
+    # разговорные слова -> термины кодексов (oʻzbek)
+    (r"\bo['ʻ‘’`]?z hisobim\w*|\bза свой сч[её]т|\bбез сохранения", "ish haqi saqlanmaydigan taʼtil отпуск без сохранения заработной платы"),
+    (r"\bo['ʻ‘’`]?zimni himoya\w*|\bhimoyalan\w*|\bсамооборон\w*|\bзащищая себя", "zaruriy mudofaa необходимая оборона"),
+    (r"\bbola\w* (bilan )?(ko['ʻ‘’`]?rish|uchrash)\w*|\bвидеться с ребенк\w*|\bобщени\w* с ребенк\w*", "boladan alohida yashayotgan otaning ota-onalik huquqi родитель проживающий отдельно от ребенка"),
+    (r"\bvasiyat\w*.*(qoldirmad|chetlat|bermad)|\bобязательн\w* дол\w*", "merosdan majburiy ulush обязательная доля в наследстве"),
+    (r"\btunda\b|\btungi\b|\bночью\b|\bночн\w*", "tungi vaqtdagi mehnat ночное время"),
+    (r"\bmaosh\w*", "ish haqi"),
+    (r"\bajrash\w*|\bajralish\w*|\bразвод\w*|\bразвест\w*", "nikohdan ajratish nikohni bekor qilish расторжение брака"),
+    (r"\basrab ol\w*|\bусынов\w*|\bудочер\w*", "farzandlikka olish усыновление"),
+    (r"\bortiqcha ish\w*|\bqo['ʻ‘’`]?shimcha ish soat\w*|\bсверхурочн\w*", "ish vaqtidan tashqari ish сверхурочные работы"),
+    (r"\bbolaga pul\b|\bbolam\w* uchun pul\b|\bnafaqa to['ʻ‘’`]?la\w*|\bалимент\w*", "aliment voyaga yetmagan bolalar алименты"),
+    (r"\bbyulleten\w*|\bkasallik varaq\w*|\bбольничн\w*", "vaqtincha mehnatga layoqatsizlik nafaqasi пособие по временной нетрудоспособности"),
+    (r"(?<!muriy )(?<!маъмурий )\bqamoq\w*|\bturma\w*|\bтюрьм\w*|\bпосад\w*", "ozodlikdan mahrum qilish лишение свободы"),
+    (r"\bprava\b|\bhaydovchilik huquq\w*|\bводительск\w* прав\w*|\bправа на вождение", "haydovchilik guvohnomasi водительское удостоверение"),
+    (r"\bpropiska\w*|\bпрописк\w*", "doimiy roʻyxatga olish регистрация по месту жительства"),
+    (r"\bishga ol\w*|\bишга қабул\w*|\bприня\w* на работ\w*|\bпри[её]м на работу", "mehnat shartnomasini tuzish ishga qabul qilish прием на работу"),
+    (r"\bish kuni necha soat|\bnecha soat ishla\w*|\bрабоч\w* (день|недел\w*)", "ish vaqtining normal muddati нормальная продолжительность рабочего времени"),
+    (r"\bзарплат\w*", "заработная плата"), (r"\bуволь\w*|\bуволен\w*", "расторжение трудового договора"),
+    (r"\bmerosxo['ʻ‘’`]?r\w*|\bнаследств\w*|\bнаследник\w*", "meros vorislik наследование"),
+    (r"\bворовств\w*|\bукра(л|ли|ла|сть|ден|дут)\w*|\bкраж\w*", "кража"),
+]
+
+
+# Явное упоминание кодекса в вопросе («Jinoyat kodeksiga koʻra…», «по Трудовому кодексу», «QQS») —
+# ищем и внутри этого кодекса, и поднимаем его статьи. Шаблон по norm(вопроса) -> часть norm(названия).
+CODE_HINTS = [
+    (r"konstitutsiya|конституц", "konstitutsiya"), (r"mehnat kodeks|трудов\w* кодекс", "mehnat kodeksi"),
+    (r"fuqarolik kodeks|гражданск\w* кодекс", "fuqarolik kodeksi"), (r"oila kodeks|семейн\w* кодекс", "oila kodeksi"),
+    (r"jinoyat kodeks|уголовн(ый|ого|ом|ому) кодекс", "jinoyat kodeksi"),
+    (r"jinoyat.protsessual|уголовно.процессуальн", "jinoyat-protsessual"),
+    (r"mamuriy javobgarlik|административн\w* ответственност", "mamuriy javobgarlik togrisidagi kodeksi"),
+    (r"soliq kodeks|налогов\w* кодекс|\bqqs\b|qoshilgan qiymat solig|daromad solig|foyda solig|\bндс\b|\bндфл\b",
+     "soliq kodeksi"),
+    (r"uy.joy kodeks|жилищн\w* кодекс", "uy-joy kodeksi"), (r"yer kodeks|земельн\w* кодекс", "yer kodeksi"),
+    (r"saylov kodeks|избирательн\w* кодекс", "saylov kodeksi"), (r"bojxona|таможен", "bojxona kodeksi"),
+]
+CODE_BOOST = 0.1
+_code_keys = {}
+
+
+def code_keys(question):
+    """Номера кодексов, которые прямо названы в вопросе (по узбекскому названию; номер один для обоих языков)."""
+    qn = norm(question)
+    frags = [frag for pat, frag in CODE_HINTS if re.search(pat, qn)]
+    if not frags:
+        return set()
+    if not _code_keys:
+        for r in db.conn().execute("SELECT key, title FROM docs WHERE lang='uz' AND active=1 "
+                                   "AND form IN ('Кодекс','Конституция')"):
+            _code_keys[r["key"]] = norm(r["title"])
+    return {k for k, t in _code_keys.items() for f in frags if f in t}
+
+
+# Частые ошибки написания: заменяем, а не дописываем («oʻgʻirlik» иначе совпадает с «ogʻir» = тяжкий).
+TYPOS = [(r"\bo['ʻ‘’`]?g['ʻ‘’`]?irlik", "oʻgʻrilik")]
+
+
+def expand(q):
+    for pat, rep in TYPOS:
+        q = re.sub(pat, rep, q, flags=re.I)
+    low = q.lower()
+    add = [rep for pat, rep in EXPAND if re.search(pat, low)]
+    cyr = bool(re.search(r"[а-яё]", low))   # в добавку берём только слова на языке вопроса
+    add = [w for rep in add for w in rep.split() if bool(re.search(r"[а-яё]", w.lower())) == cyr]
+    return (q + " " + " ".join(dict.fromkeys(add))) if add else q
+
+
+SECTION_BOOST = 0.08
+W_COV, W_HP, W_RS = 0.35, 0.25, 0.4   # вес: покрытие слов вопроса, точность заголовка, балл BM25
+
+
 def retrieve(question, lang, rewritten, k, as_of=None, orig_rows=None):
     cands = {}
+    hinted = code_keys(question)
+    ts_all = list(dict.fromkeys(terms(rewritten or "") + terms(question)))
+    for r in chapter_candidates(ts_all, lang):
+        cands.setdefault(r["id"], (r, 0.5))
+    for key in hinted:   # статьи названного кодекса попадают в кандидаты, даже если общий поиск их не нашёл
+        rows = db.search_articles(rewritten or question, lang, limit=15, active_only=True, key=key, count=False)[0]
+        if rows:
+            best = -rows[0]["score"] or 1.0
+            for r in rows:
+                cands.setdefault(r["id"], (r, round(min(1.0, 0.8 * max(0.0, -r["score"]) / best), 4)))
     for q, weight in ((rewritten, 1.0), (question, 0.9)):
         if not q:
             continue
@@ -188,14 +330,20 @@ def retrieve(question, lang, rewritten, k, as_of=None, orig_rows=None):
             if not prev or s * weight > prev[1]:
                 cands[r["id"]] = (r, round(min(1.0, s * weight), 4))
     t_new, t_orig = terms(rewritten or ""), terms(question)
+    nq = norm(question)
+    topics = [norm(rep) for _, rep in EXPAND if norm(rep) in nq and len(rep) > 12]
     scored = []
     for r, rs in cands.values():
         cov = (0.6 * _cover(r, t_new) + 0.4 * _cover(r, t_orig)) if t_new else _cover(r, t_orig)
         hp = max(_head_precision(r, t_new), _head_precision(r, t_orig))
-        sc = 0.55 * cov + 0.15 * hp + 0.3 * rs
+        sc = W_COV * cov + W_HP * hp + W_RS * rs
         sc *= _special_penalty(r, question, rewritten)
         if r["amending"]:          # акты «о внесении изменений» — не основной текст нормы
             sc *= 0.6
+        if r["key"] in hinted:
+            sc += CODE_BOOST
+        if topics and "chapter" in r.keys() and any(t in norm(r["chapter"] or "") for t in topics):
+            sc += SECTION_BOOST   # раздел кодекса совпадает с темой (напр. «Qoʻshilgan qiymat soligʻi»)
         if r["form"] in ("Кодекс", "Конституция"):
             sc += 0.05
         elif r["form"] == "Закон":
@@ -212,6 +360,8 @@ GEN_SYSTEM = """You are a legal question-answering system for the legislation of
 Answer ONLY from the numbered contexts (articles from lex.uz). Rules:
 - Every factual sentence must end with a citation like [1] or [2][3] that refers to the context number.
 - Copy numbers (days, sums, percent, BHM/БРВ, terms) exactly as written in the context.
+- Cite the article that states the rule directly. If contexts disagree, rely on the code or law in force
+  (Konstitutsiya, kodeks, qonun) over resolutions or decrees that describe earlier changes ("... dan ... gacha pasaytirildi").
 - If the contexts do not contain the answer, or the question is not about Uzbek law, set "no_answer": true and
   write one short sentence that the legislation in the found sources does not answer this question. Never guess.
 - For each citation give "quote": an exact verbatim fragment (one sentence or clause, max 300 characters)
@@ -377,6 +527,7 @@ def answer_item(item, opts):
     top_k = int(opts.get("top_k") or 5)
     try:
         tr = time.time()
+        q_search = expand(q_search)
         f_orig = _search_pool.submit(_search, q_search, lang)   # поиск по исходному вопросу идёт параллельно
         rewritten, u1 = _rewrite(q_search, lang)
         ctxs, retrieved_total = retrieve(q_search, lang, rewritten, max(top_k, GEN_CONTEXTS), opts.get("as_of_date"),
@@ -415,8 +566,12 @@ def answer_item(item, opts):
             continue
         if 1 <= ref <= len(ctxs) and ref not in cited_refs:
             cited_refs.append(ref)
-    used_text = set(int(x) for x in re.findall(r"\[(\d+)\]", out.get("answer") or "") if 0 < int(x) <= len(ctxs))
-    keep = list(range(1, min(top_k, len(ctxs)) + 1)) + [r for r in sorted(set(cited_refs) | used_text) if r > top_k]
+    used_text = [int(x) for x in re.findall(r"\[(\d+)\]", out.get("answer") or "") if 0 < int(x) <= len(ctxs)]
+    # Порядок контекстов: сначала статьи, на которые опирается ответ (модель прочитала все кандидаты и выбрала
+    # нужные: это и есть переранжирование), потом остальные по баллу поиска. Всего не меньше top_k.
+    first = [] if out.get("no_answer") else list(dict.fromkeys(used_text + cited_refs))
+    rest = [r for r in range(1, len(ctxs) + 1) if r not in first]
+    keep = first + rest[: max(0, top_k - len(first))]
     renum = {old: new for new, old in enumerate(keep, 1)}
 
     citations = []
@@ -455,7 +610,8 @@ def answer_item(item, opts):
         sc, rs, r = ctxs[old - 1]
         cid = _chunk_id(r)
         ctx = {"rank": rank, "chunk_id": cid, "doc_id": f"lex:{r['key']}", "doc_title": r["doc_title"],
-               "article": _art_label(r), "url": r["src_url"], "retrieval_score": rs, "rerank_score": sc,
+               "article": _art_label(r), "url": r["src_url"], "retrieval_score": rs,
+               "rerank_score": 1.0 if old in first else sc,
                "used_in_answer": cid in cited_ids}
         if opts.get("return_contexts", True):
             ctx["text"] = clean(r["text"])

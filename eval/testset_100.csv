@@ -1,0 +1,101 @@
+id,batch,category,question,expected_answer,expected_doc_id,expected_article,answerable
+q001,b01,faktik,Ishga qabul qilishda dastlabki sinov qanday maqsadda belgilanadi?,Xodimning topshirilayotgan ishga muvofiqligini tekshirish uchun,lex:6257288,129-modda,true
+q002,b01,faktik,Ijtimoiy taʼtillar nima?,"Onalik, bola parvarishi, taʼlim va boshqa ijtimoiy maqsadlarda beriladigan taʼtillar",lex:6257288,236-modda,true
+q003,b01,faktik,Nikoh shartnomasi nima?,Er-xotinning mulkiy huquq va majburiyatlarini belgilovchi kelishuv,lex:104720,29-modda,true
+q004,b01,faktik,Mayda bezorilik nima?,"Jamoat joylarida uyatli soʻzlar bilan soʻkinish, haqoratomuz shilqimlik va shu kabi harakatlar",lex:97664,183-modda,true
+q005,b01,raqamlar,Xodim oʻz xohishi bilan ishdan ketishi uchun necha kun oldin ogohlantirishi kerak?,14 kalendar kun oldin yozma shaklda,lex:6257288,160-modda,true
+q006,b01,kop_manba,Oddiy xodim va 16–18 yoshli xodim uchun haftalik ish vaqti qancha?,40 soat (182-modda) va 36 soat (415-modda),lex:6257288,182-modda,true
+q007,b01,kop_manba,Jinoiy va maʼmuriy javobgarlik necha yoshdan boshlanadi?,"Jinoiy 16 yoshdan, ayrim jinoyatlar uchun 14 yoshdan (JK 17); maʼmuriy 16 yoshdan (MJtK 13)",lex:111453,17-modda,true
+q008,b01,ozgargan,Oʻzbekistonda oʻlim jazosi qoʻllanadimi?,"Yoʻq, Konstitutsiyaga koʻra oʻlim jazosi taqiqlanadi",lex:6445145,25-modda,true
+q009,b01,rus_kirill,Какова нормальная продолжительность рабочего времени в неделю?,Не более 40 часов,lex:6257288,182-modda,true
+q010,b01,javobsiz,Qozogʻiston Konstitutsiyasiga koʻra prezident necha yoshdan saylanadi?,,,,false
+q011,b02,faktik,Dastlabki sinov davri mehnat stajiga kiradimi?,"Ha, sinov davri mehnat stajiga kiradi",lex:6257288,131-modda,true
+q012,b02,faktik,Fuqaroning toʻliq muomala layoqati qachon vujudga keladi?,"Voyaga yetgach, yaʼni 18 yoshga toʻlganda",lex:111189,22-modda,true
+q013,b02,faktik,Nikohdan ajratish qanday tartibda amalga oshiriladi?,"Sud tartibida, 42 va 43-moddalardagi hollarda FHDY organida",lex:104720,38-modda,true
+q014,b02,faktik,Maʼmuriy javobgarlik necha yoshdan boshlanadi?,16 yoshdan,lex:97664,13-modda,true
+q015,b02,raqamlar,Ish vaqtidan tashqari ishning eng koʻp davomiyligi qancha?,Surunkasiga ikki kun davomida 4 soatdan (noqulay sharoitda kuniga 2 soatdan) oshmasligi,lex:6257288,190-modda,true
+q016,b02,kop_manba,Homiladorlik va tugʻish taʼtilidan keyin bola parvarishi taʼtili qancha davom etadi?,"404-modda: 70+56 kun; 405-modda: bola 2 yoshga toʻlguncha, xohishga koʻra 3 yoshgacha",lex:6257288,405-modda,true
+q017,b02,kop_manba,Ushlangan shaxs qancha vaqt ushlab turilishi mumkin va ehtiyot chorasi ustidan qayerga shikoyat qilinadi?,"48 soatgacha (226); prokurorga, u 3 sutkada koʻrib chiqadi (241)",lex:111460,226-modda,true
+q018,b02,ozgargan,QQS stavkasi 20 foizmi?,"Yoʻq, amaldagi Soliq kodeksiga koʻra 12 foiz",lex:4674902,258-modda,true
+q019,b02,rus_kirill,Йиллик асосий меҳнат таътили неча кун?,21 календар кун,lex:6257288,217-modda,true
+q020,b02,javobsiz,Marsda yer uchastkasi sotib olish uchun qanday ruxsat kerak?,,,,false
+q021,b03,faktik,Qaysi vaqt tungi vaqt hisoblanadi?,Soat 22:00 dan 6:00 gacha,lex:6257288,188-modda,true
+q022,b03,faktik,Daʼvo muddati nima?,Shaxs buzilgan huquqini daʼvo qoʻzgʻatish yoʻli bilan himoya qilishi mumkin boʻlgan muddat,lex:111189,149-modda,true
+q023,b03,faktik,Kimlar farzandlikka ola olmaydi?,"Ota-onalik huquqidan mahrum qilinganlar, muomalaga layoqatsizlar va moddada sanalgan boshqa shaxslar",lex:104720,152-modda,true
+q024,b03,faktik,Oʻzbekistonning davlat tili qaysi?,Oʻzbek tili,lex:6445145,4-modda,true
+q025,b03,raqamlar,Ish vaqtidan tashqari ish uchun qancha haq toʻlanadi?,"Birinchi ikki soat kamida bir yarim hissa, keyingi soatlar kamida ikki hissa",lex:6257288,262-modda,true
+q026,b03,kop_manba,Ortiqcha ish necha soatgacha ruxsat etiladi va unga qanday haq toʻlanadi?,"Ikki kun ketma-ket 4 soatdan oshmasligi (190); 1,5 va 2 hissa haq (262)",lex:6257288,190-modda,true
+q027,b03,kop_manba,Prezident boʻlish uchun qanday talablar bor va kimlar saylash huquqiga ega?,"35 yosh, davlat tilini bilish, 10 yil yashash (106); fuqarolar saylash huquqiga ega (128)",lex:6445145,106-modda,true
+q028,b03,ozgargan,1-oktabr ishlanmaydigan bayram kunimi?,"Ha, Oʻqituvchi va murabbiylar kuni",lex:6257288,208-modda,true
+q029,b03,rus_kirill,Бир бола учун алимент миқдори қанча?,Даромаднинг тўртдан бир қисми,lex:104720,99-modda,true
+q030,b03,javobsiz,Как приготовить борщ?,,,,false
+q031,b04,faktik,Qaysi kunlar ishlanmaydigan bayram kunlari hisoblanadi?,"1-yanvar, 8-mart, 21-mart, 9-may, 1-sentabr, 1-oktabr, 8-dekabr va boshqa kunlar",lex:6257288,208-modda,true
+q032,b04,faktik,Daʼvo muddati oʻtgan boʻlsa ham sud daʼvoni qabul qiladimi?,"Ha, qabul qiladi; muddat faqat tarafning arizasi boʻyicha qoʻllanadi",lex:111189,153-modda,true
+q033,b04,faktik,Farzandlikka olish sir saqlanadimi?,"Ha, farzandlikka olish siri qonun bilan himoya qilinadi",lex:104720,153-modda,true
+q034,b04,faktik,Oʻzbekiston Respublikasining poytaxti qaysi shahar?,Toshkent shahri,lex:6445145,6-modda,true
+q035,b04,raqamlar,Intizomiy jazo qilmish aniqlanganidan keyin qancha muddatda qoʻllanishi kerak?,Aniqlangan kundan boshlab bir oydan kechiktirmay,lex:6257288,314-modda,true
+q036,b04,kop_manba,Tungi vaqt qaysi soatlar va tungi ish qanday toʻlanadi?,22:00–6:00 (188); kamida bir yarim baravar (264),lex:6257288,188-modda,true
+q037,b04,kop_manba,"Ish beruvchi xodimni ishdan boʻshatsa, ogohlantirish va ishdan boʻshatish nafaqasi qanday boʻladi?",Yozma ogohlantirish muddatlari (165); ishdan boʻshatish nafaqasi (173),lex:6257288,165-modda,true
+q038,b04,ozgargan,Ish haqini oyiga bir marta toʻlash mumkinmi?,"Yoʻq, har yarim oyda kamida bir marta toʻlanadi",lex:6257288,253-modda,true
+q039,b04,rus_kirill,Ўзбекистоннинг давлат тили қайси?,Ўзбек тили,lex:6445145,4-modda,true
+q040,b04,javobsiz,iPhone yaxshimi yoki Samsung?,,,,false
+q041,b05,faktik,Dam olish kunlarida ishlash mumkinmi?,"Taqiqlanadi, Kodeksda nazarda tutilgan hollar bundan mustasno",lex:6257288,209-modda,true
+q042,b05,faktik,Vasiylik va homiylik nima uchun belgilanadi?,Muomalaga layoqatsiz yoki toʻliq layoqatli boʻlmagan fuqarolarning huquq va manfaatlarini himoya qilish uchun,lex:111189,32-modda,true
+q043,b05,faktik,Jinoyat kodeksiga koʻra oʻgʻirlik nima?,Oʻzganing mol-mulkini yashirin ravishda talon-toroj qilish,lex:111453,169-modda,true
+q044,b05,faktik,Jamoat joylarida chekkanlik uchun javobgarlik qaysi moddada?,Maʼmuriy javobgarlik toʻgʻrisidagi kodeksning 56^1-moddasi,lex:97664,56^1-modda,true
+q045,b05,raqamlar,Bir bola uchun aliment miqdori qancha?,Ota-onaning ish haqi va boshqa daromadining toʻrtdan bir qismi,lex:104720,99-modda,true
+q046,b05,kop_manba,Nikoh yoshi necha va nikoh qayerda roʻyxatdan oʻtkaziladi?,18 yosh (15-modda); FHDY organlarida (13-modda),lex:104720,15-modda,true
+q047,b05,kop_manba,QQS stavkasi qancha va QQS boʻyicha soliq davri qancha?,12 foiz (258); bir oy (259),lex:4674902,258-modda,true
+q048,b05,ozgargan,Qizlar uchun nikoh yoshi 17 yoshmi?,"Yoʻq, erkak va ayollar uchun 18 yosh",lex:104720,15-modda,true
+q049,b05,rus_kirill,Фуқаронинг тўлиқ муомала лаёқати неча ёшдан бошланади?,18 ёшдан,lex:111189,22-modda,true
+q050,b05,javobsiz,AQShda eng kam ish haqi qancha?,,,,false
+q051,b06,faktik,Besh kunlik ish haftasida xodimga haftasiga nechta dam olish kuni beriladi?,Ikki kun (olti kunlik haftada bir kun),lex:6257288,207-modda,true
+q052,b06,faktik,Mulk huquqi nima?,"Mol-mulkka egalik qilish, undan foydalanish va uni tasarruf etish huquqi",lex:111189,164-modda,true
+q053,b06,faktik,Firibgarlik nima?,Aldash yoki ishonchni suiisteʼmol qilish yoʻli bilan oʻzganing mulkini qoʻlga kiritish,lex:111453,168-modda,true
+q054,b06,raqamlar,Ish vaqtining normal davomiyligi haftasiga necha soat?,Haftasiga 40 soatdan oshmasligi kerak,lex:6257288,182-modda,true
+q055,b06,raqamlar,Maʼmuriy qamoqqa olish qancha muddatga qoʻllaniladi?,3 sutkadan 15 sutkagacha (favqulodda holatda 30 sutkagacha),lex:97664,29-modda,true
+q056,b06,kop_manba,Er homilador xotinidan ajrashmoqchi; mumkinmi va ajrim qanday tartibda boʻladi?,Homiladorlikda va bola tugʻilgandan keyin bir yil xotin roziligisiz mumkin emas (39); ajrim sud tartibida (38),lex:104720,39-modda,true
+q057,b06,ozgargan,Yillik asosiy taʼtil 15 ish kuni degan qoida hali ham amaldami?,"Yoʻq, amaldagi Mehnat kodeksida 21 kalendar kun; eski kodeks kuchini yoʻqotgan",lex:6257288,217-modda,true
+q058,b06,rus_kirill,Какой общий срок исковой давности?,Три года,lex:111189,150-modda,true
+q059,b06,javobsiz,Ertaga Toshkentda ob-havo qanday boʻladi?,,,,false
+q060,b06,noaniq,otpuskka necha kun chiqsa boʻladi,21 kalendar kun,lex:6257288,217-modda,true
+q061,b07,faktik,Mehnat daftarchasi nima?,Xodimning mehnat stajini tasdiqlovchi asosiy hujjat (qogʻoz yoki elektron),lex:6257288,125-modda,true
+q062,b07,faktik,14 yoshga toʻlmagan bola nomidan bitimlarni kim tuzadi?,"Ota-onasi, farzandlikka oluvchilari yoki vasiylari",lex:111189,29-modda,true
+q063,b07,faktik,Bosqinchilik nima?,Mulkni talon-toroj qilish maqsadida hayot yoki sogʻliq uchun xavfli zoʻrlik bilan hujum qilish,lex:111453,164-modda,true
+q064,b07,raqamlar,Dastlabki sinov muddati koʻpi bilan qancha boʻlishi mumkin?,"3 oy, rahbarlar va bosh buxgalterlar uchun 6 oy",lex:6257288,130-modda,true
+q065,b07,raqamlar,Gumon qilinuvchini ushlab turish muddati qancha?,Koʻpi bilan 48 soat,lex:111460,226-modda,true
+q066,b07,kop_manba,Voyaga yetmagan va voyaga yetgan mehnatga layoqatsiz bolalarga aliment qanday toʻlanadi?,"Voyaga yetmaganlarga daromadning ulushida (99); voyaga yetgan layoqatsiz, muhtoj bolalarga ota-ona kelishuvi boʻyicha, kelishuv boʻlmasa sud tartibida (100)",lex:104720,99-modda,true
+q067,b07,ozgargan,Eski Konstitutsiyaning 90-moddasidagi Prezidentga qoʻyiladigan talablar hozir qaysi moddada?,Amaldagi Konstitutsiyaning 106-moddasida,lex:6445145,106-modda,true
+q068,b07,rus_kirill,Сколько дней длится минимальный ежегодный основной отпуск?,21 календарный день,lex:6257288,217-modda,true
+q069,b07,javobsiz,Bitkoin narxi hozir qancha?,,,,false
+q070,b07,noaniq,ishdan ketmoqchiman qachon aytishim kerak,14 kalendar kun oldin yozma ogohlantirish,lex:6257288,160-modda,true
+q071,b08,faktik,Ishga kirayotganda qanday hujjatlar taqdim etiladi?,Pasport yoki ID-karta va Kodeksda sanalgan boshqa hujjatlar,lex:6257288,124-modda,true
+q072,b08,faktik,Nikoh qayerda tuziladi?,FHDY organlarida; diniy rasm-rusum bilan tuzilgan nikoh huquqiy ahamiyatga ega emas,lex:104720,13-modda,true
+q073,b08,faktik,Jinoyatlar qanday toifalarga boʻlinadi?,"Ijtimoiy xavfi katta boʻlmagan, uncha ogʻir boʻlmagan, ogʻir va oʻta ogʻir",lex:111453,15-modda,true
+q074,b08,raqamlar,16 yoshdan 18 yoshgacha boʻlgan xodimlarning haftalik ish vaqti qancha?,Haftasiga 36 soatdan oshmaydi (15–16 yosh uchun 24 soat),lex:6257288,415-modda,true
+q075,b08,raqamlar,Dastlabki tergov qancha muddatda tugashi kerak?,Ish qoʻzgʻatilgan kundan boshlab 3 oydan oshmagan muddatda,lex:111460,351-modda,true
+q076,b08,kop_manba,Umumiy daʼvo muddati qancha va maxsus muddatlar boʻlishi mumkinmi?,3 yil (150); qonunda maxsus muddatlar belgilanishi mumkin (151),lex:111189,150-modda,true
+q077,b08,ozgargan,Eski Soliq kodeksidagi daromad soligʻi stavkalari amaldami? Hozir qancha?,Eski kodeks kuchini yoʻqotgan; hozir 12 foiz,lex:4674902,381-modda,true
+q078,b08,rus_kirill,С какого возраста можно вступать в брак?,С 18 лет,lex:104720,15-modda,true
+q079,b08,javobsiz,2022-yilgi futbol boʻyicha jahon chempioni kim?,,,,false
+q080,b08,noaniq,erim bolaga pul bermayapti qancha olsam boʻladi,Bir bola uchun daromadning 1/4 qismi aliment,lex:104720,99-modda,true
+q081,b09,faktik,Mehnat intizomini buzgan xodimga qanday intizomiy jazolar qoʻllanadi?,Hayfsan yoki oʻrtacha oylik ish haqining 30 foizigacha jarima,lex:6257288,312-modda,true
+q082,b09,faktik,Nikohga majburlash mumkinmi?,"Yoʻq, nikoh ixtiyoriy, majburlash taqiqlanadi",lex:104720,14-modda,true
+q083,b09,faktik,Jinoyat uchun qanday asosiy jazo turlari bor?,"Jarima, huquqdan mahrum qilish, majburiy jamoat ishlari, axloq tuzatish ishlari, ozodlikdan mahrum qilish va boshqalar",lex:111453,43-modda,true
+q084,b09,raqamlar,Homiladorlik va tugʻish taʼtili necha kun beriladi?,Tugʻruqqacha 70 va tugʻruqdan keyin 56 kalendar kun (qiyin tugʻruqda 70),lex:6257288,404-modda,true
+q085,b09,raqamlar,Rezident jismoniy shaxslar daromadiga qaysi stavkada soliq solinadi?,"12 foiz, dividend va foizlarga 5 foiz",lex:4674902,381-modda,true
+q086,b09,kop_manba,14 yoshli va 18 yoshli fuqaroning muomala layoqati qanday farq qiladi?,14–18 yoshda bitimlar ota-ona roziligi bilan (27); 18 yoshdan toʻliq layoqat (22),lex:111189,27-modda,true
+q087,b09,ozgargan,Eski Mehnat kodeksi kuchini yoʻqotganmi? Hozir dastlabki sinov muddati qancha?,"Ha, yangi Mehnat kodeksi amalda; sinov muddati 3 oygacha",lex:6257288,130-modda,true
+q088,b09,rus_kirill,С какого возраста наступает уголовная ответственность?,"С 16 лет, за отдельные преступления с 14 лет",lex:111453,17-modda,true
+q089,b09,javobsiz,Rossiyada haydovchilik guvohnomasini olish qancha turadi?,,,,false
+q090,b09,noaniq,qarzimni qaytarmayapti necha yilgacha sudga bersam boʻladi,Umumiy daʼvo muddati 3 yil,lex:111189,150-modda,true
+q091,b10,faktik,Qaysi xodimlar bilan toʻliq moddiy javobgarlik toʻgʻrisida shartnoma tuziladi?,Pul yoki tovar qimmatliklari bilan bevosita muomala qiluvchi xodimlar bilan,lex:6257288,343-modda,true
+q092,b10,faktik,Kimlar oʻrtasida nikoh tuzish mumkin emas?,"Boshqa nikohdagi shaxslar, yaqin qarindoshlar, farzandlikka oluvchi va olingan va boshqalar",lex:104720,16-modda,true
+q093,b10,faktik,Pora olish deganda nima tushuniladi?,Mansabdor shaxsning xizmat mavqeyidan foydalanib muayyan harakat uchun moddiy qimmatlik yoki naf olishi,lex:111453,210-modda,true
+q094,b10,raqamlar,Ish haqi qanchada bir marta toʻlanishi kerak?,Har yarim oyda kamida bir marta,lex:6257288,253-modda,true
+q095,b10,raqamlar,Prezidentlikka nomzod necha yoshdan kichik boʻlmasligi kerak?,35 yosh,lex:6445145,106-modda,true
+q096,b10,kop_manba,Oʻgʻirlik bilan firibgarlikning farqi nima?,"Oʻgʻirlik yashirin talon-toroj (169), firibgarlik aldash yoki ishonchni suiisteʼmol qilish (168)",lex:111453,169-modda,true
+q097,b10,ozgargan,Hozirgi qonunga koʻra oʻz xohishi bilan ishdan ketish uchun ogohlantirish muddati qancha?,14 kalendar kun,lex:6257288,160-modda,true
+q098,b10,rus_kirill,Что такое мелкое хулиганство?,"Нецензурная брань в общественных местах, оскорбительное приставание к гражданам и т.п.",lex:97664,183-modda,true
+q099,b10,javobsiz,Palov qanday tayyorlanadi?,,,,false
+q100,b10,noaniq,shanba yakshanba majburlab ishlatishyapti mumkinmi,"Dam olish kunlari ishlash taqiqlanadi, istisnolar Kodeksda belgilangan",lex:6257288,209-modda,true

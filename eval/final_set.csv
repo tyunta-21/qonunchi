@@ -1,0 +1,39 @@
+id,batch,category,question,expected_answer,expected_doc_id,expected_article,answerable
+f001,b01,faktik,Oʻn sakkiz yoshgacha boʻlganlarni qanday ishlarga olish taqiqlanadi?,,lex:6257288,412-modda,true
+f002,b02,faktik,Mehnat nizolari komissiyasi oʻn kunda nizoni koʻrmasa xodim sudga murojaat qila oladimi?,,lex:6257288,556-modda,true
+f003,b03,faktik,Nikoh tuzish ixtiyoriymi?,,lex:104720,14-modda,true
+f004,b04,faktik,Birov mening ismimdan qonunsiz foydalansa nima qila olaman?,,lex:111189,20-modda,true
+f005,b05,faktik,Umumiy mulkdagi ulush sotilganda boshqa mulkdorlarning imtiyozli sotib olish huquqi bormi?,,lex:111189,224-modda,true
+f006,b06,faktik,Sugʻurta hodisasi yuz berganda sugʻurta qildiruvchi zararni kamaytirish uchun nima qilishi kerak?,,lex:180552,952-modda,true
+f007,b07,faktik,Oddiy shirkatda sherik hujjatlar bilan tanishishga haqlimi?,,lex:180552,966-modda,true
+f008,b08,faktik,Pirotexnika buyumlarini noqonuniy sotish jinoyatmi?,,lex:111453,250^1-modda,true
+f009,b09,faktik,Jinoyatlar majmui deb nimaga aytiladi?,,lex:111453,33-modda,true
+f010,b10,faktik,Chegara zonasiga kirish qoidalarini buzganlik uchun jarima qancha?,,lex:97664,224-modda,true
+f011,b01,faktik,Maʼmuriy huquqbuzar yetkazilgan zararni qoplashi shartmi?,,lex:97664,38-modda,true
+f012,b02,faktik,Soliqning elementlariga nimalar kiradi?,,lex:4674902,69-modda,true
+f013,b03,faktik,Soliq summasi qanday hisoblab chiqariladi?,,lex:4674902,74-modda,true
+f014,b04,faktik,Davlat hisobidan oliy maʼlumot olish mumkinmi?,,lex:6445145,51-modda,true
+f015,b05,faktik,Markaziy saylov komissiyasiga aʼzo boʻlish uchun qanday talablar bor?,,lex:4386848,13-modda,true
+f016,b06,faktik,Qonunchilik palatasi saylovi uchun nechta saylov okrugi tuziladi?,,lex:4386848,9-modda,true
+f017,b07,faktik,Qachon fuqaro turar joydan foydalanish huquqini yoʻqotgan deb topiladi?,,lex:106136,54-modda,true
+f018,b08,faktik,Talabalarga yotoqxona beriladimi?,,lex:106136,82-modda,true
+f019,b09,faktik,Qishloq xoʻjaligiga moʻljallangan yerlar deb qanday yerlarga aytiladi?,,lex:152653,43-modda,true
+f023,b03,faktik,Yer osti chuchuk suvlaridan qanday maqsadda foydalaniladi?,,lex:7655343,89-modda,true
+f024,b04,faktik,Maʼmuriy sud ishlarida taraflar kimlar?,,lex:3527353,40-modda,true
+f025,b05,faktik,Qanday hollarda shaxsni ishsiz deb tan olish rad etiladi?,,lex:5055690,45-modda,true
+f026,b06,faktik,Bankrotlikda kreditorlarning talablari qanday navbatda qanoatlantiriladi?,,lex:5957612,150-modda,true
+f027,b07,faktik,Jazoni oʻtayotgan qarzdorning ish haqidan qarz undiriladimi?,,lex:26477,67-modda,true
+f028,b08,faktik,Transplantatsiya uchun retsipiyentning roziligi kerakmi?,,lex:6001286,10-modda,true
+f029,b09,faktik,Davlat hisobidan advokat qanday tayinlanadi?,,lex:6502543,20-modda,true
+f030,b10,faktik,Koʻchmas mulkka huquqlarni kim roʻyxatdan oʻtkazadi?,,lex:6297080,21-modda,true
+f031,b01,faktik,Tamgʻasiz zargarlik buyumlarini sotish mumkinmi?,,lex:5595448,33-modda,true
+f032,b02,faktik,Maktabgacha taʼlim tashkilotlari faoliyatini kim boshqaradi?,,lex:4646908,12-modda,true
+f033,b03,faktik,Yashash joyi boʻyicha roʻyxatdan oʻtkazishni qaysi davlat organi tartibga soladi?,,lex:7623461,11-modda,true
+f034,b04,faktik,Avtomobil yoʻllari qanday moliyalashtiriladi?,,lex:8377546,28-modda,true
+f035,b05,faktik,Mikromoliya tashkiloti toʻlov xizmatlarini koʻrsata oladimi?,,lex:5972411,11-modda,true
+f036,b06,rus,На каких работах запрещено использовать труд лиц до восемнадцати лет?,,lex:6257288,412-modda,true
+f037,b07,rus,Что такое договор ренты?,,lex:180552,512-modda,true
+f038,b08,rus,Гарантируется ли свобода совести?,,lex:6445145,35-modda,true
+f040,b10,rus,Кто может быть принят в гражданство Узбекистана в особом порядке?,,lex:4761984,21-modda,true
+f041,b01,noaniq,birov mening nomimdan foydalanib reklama qilyapti nima qilay,,lex:111189,20-modda,true
+f042,b02,noaniq,qamoqdagi odamdan qarzni undirsa boʻladimi,,lex:26477,67-modda,true
