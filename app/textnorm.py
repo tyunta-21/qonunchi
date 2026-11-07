@@ -6,7 +6,7 @@ _WORD = re.compile(r"\w+", re.UNICODE)
 
 STOP = set("""и в во на не что как по к ко из у за о об от до для с со а но или ли же бы это то
 тот та те при сколько какой какая какое какие каков положено положен должен должна могу может мож нужен надо если ли разве почему зачем без над под между про чем где когда если можно нужно ли мне меня мой моя я ты вы мы он она они
-necha qancha qaysi qanday nega kerakmi mumkinmi boʻladi bo'ladi boladi ва ҳам ham bilan uchun va yoki emas bu shu qanday nima qachon kim mumkin kerak men biz siz u ular edi
+kora boyicha haqida qayerda hali hozir degan deb bor necha qancha qaysi qanday nega kerakmi mumkinmi boʻladi bo'ladi boladi ва ҳам ham bilan uchun va yoki emas bu shu qanday nima qachon kim mumkin kerak men biz siz u ular edi
 """.split())
 
 
