@@ -1,0 +1,13 @@
+# Для бесплатного Render.com: база laws.db не лежит в git (380 МБ),
+# поэтому при сборке она скачивается из GitHub Release (тег db-v1, файл laws.db).
+FROM python:3.12-slim
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+ARG DB_URL=https://github.com/tyunta-21/qonunchi/releases/download/db-v1/laws.db
+RUN mkdir -p data && python -c "import urllib.request,sys; urllib.request.urlretrieve(sys.argv[1], 'data/laws.db')" "$DB_URL" \
+ && python -c "import sqlite3; print('docs:', sqlite3.connect('data/laws.db').execute('select count(*) from sqlite_master').fetchone())"
+COPY app app
+COPY build_db.py .
+ENV PORT=10000
+CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT} --proxy-headers --forwarded-allow-ips='*'"]
