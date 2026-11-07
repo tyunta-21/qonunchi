@@ -15,7 +15,7 @@ from . import db, llm
 from .textnorm import norm, terms
 from .translit import detect, cyr_to_lat, db_lang
 
-PIPELINE_VERSION = "0.2.0"
+PIPELINE_VERSION = "0.3.0"
 SYNC_TIMEOUT = float(os.environ.get("RAG_SYNC_TIMEOUT", "110"))
 ITEM_TIMEOUT = float(os.environ.get("RAG_ITEM_TIMEOUT", "60"))
 WORKERS = int(os.environ.get("RAG_WORKERS", "10"))
@@ -214,11 +214,32 @@ EXPAND = [
     (r"\bbhm\b", "bazaviy hisoblash miqdori"), (r"\bбрв\b", "базовая расчетная величина"),
     (r"\bfhdy\b|\bzags\b|\bзагс\b", "fuqarolik holati dalolatnomalarini qayd etish organlari"),
     (r"\botpusk\w*", "mehnat taʼtili"), (r"\bdekret\w*", "homiladorlik va tugʻish taʼtili bola parvarishlash taʼtili"),
-    (r"\bogʻirlik\b|\bo['ʻ‘]?g['ʻ‘]?irlik\b", "oʻgʻrilik"), (r"\bishdan ket\w*", "mehnat shartnomasini xodimning tashabbusiga koʻra bekor qilish"),
+    (r"\bishdan ket\w*", "mehnat shartnomasini xodimning tashabbusiga koʻra bekor qilish"),
     (r"\bishdan (boʻshat|bo'shat|boshat)\w*", "mehnat shartnomasini ish beruvchining tashabbusiga koʻra bekor qilish"),
     (r"\bshanba\b|\byakshanba\b|\bvыходн\w*", "dam olish kunlari"), (r"\bвыходн\w*", "выходные дни"),
     (r"\bqarz\w*.*\bsudga\b|\bsudga\b.*\bqarz\w*", "daʼvo muddati"),
     (r"\bo['ʻ‘]?lim jazosi\b|\bсмертн\w* казн\w*", "oʻlim jazosi taqiqlanadi"),
+    (r"\bjazo turlari\b|\bjazo(ning)? turlari\b|\bвид\w* наказани\w*", "jazo tizimi asosiy jazolar"),
+    # разговорные слова -> термины кодексов (oʻzbek)
+    (r"\bo['ʻ‘’`]?z hisobim\w*|\bза свой сч[её]т|\bбез сохранения", "ish haqi saqlanmaydigan taʼtil отпуск без сохранения заработной платы"),
+    (r"\bo['ʻ‘’`]?zimni himoya\w*|\bhimoyalan\w*|\bсамооборон\w*|\bзащищая себя", "zaruriy mudofaa необходимая оборона"),
+    (r"\bbola\w* (bilan )?(ko['ʻ‘’`]?rish|uchrash)\w*|\bвидеться с ребенк\w*|\bобщени\w* с ребенк\w*", "boladan alohida yashayotgan otaning ota-onalik huquqi родитель проживающий отдельно от ребенка"),
+    (r"\bvasiyat\w*.*(qoldirmad|chetlat|bermad)|\bобязательн\w* дол\w*", "merosdan majburiy ulush обязательная доля в наследстве"),
+    (r"\btunda\b|\btungi\b|\bночью\b|\bночн\w*", "tungi vaqtdagi mehnat ночное время"),
+    (r"\bmaosh\w*", "ish haqi"),
+    (r"\bajrash\w*|\bajralish\w*|\bразвод\w*|\bразвест\w*", "nikohdan ajratish nikohni bekor qilish расторжение брака"),
+    (r"\basrab ol\w*|\bусынов\w*|\bудочер\w*", "farzandlikka olish усыновление"),
+    (r"\bortiqcha ish\w*|\bqo['ʻ‘’`]?shimcha ish soat\w*|\bсверхурочн\w*", "ish vaqtidan tashqari ish сверхурочные работы"),
+    (r"\bbolaga pul\b|\bbolam\w* uchun pul\b|\bnafaqa to['ʻ‘’`]?la\w*|\bалимент\w*", "aliment voyaga yetmagan bolalar алименты"),
+    (r"\bbyulleten\w*|\bkasallik varaq\w*|\bбольничн\w*", "vaqtincha mehnatga layoqatsizlik nafaqasi пособие по временной нетрудоспособности"),
+    (r"(?<!muriy )(?<!маъмурий )\bqamoq\w*|\bturma\w*|\bтюрьм\w*|\bпосад\w*", "ozodlikdan mahrum qilish лишение свободы"),
+    (r"\bprava\b|\bhaydovchilik huquq\w*|\bводительск\w* прав\w*|\bправа на вождение", "haydovchilik guvohnomasi водительское удостоверение"),
+    (r"\bpropiska\w*|\bпрописк\w*", "doimiy roʻyxatga olish регистрация по месту жительства"),
+    (r"\bishga ol\w*|\bишга қабул\w*|\bприня\w* на работ\w*|\bпри[её]м на работу", "mehnat shartnomasini tuzish ishga qabul qilish прием на работу"),
+    (r"\bish kuni necha soat|\bnecha soat ishla\w*|\bрабоч\w* (день|недел\w*)", "ish vaqtining normal muddati нормальная продолжительность рабочего времени"),
+    (r"\bзарплат\w*", "заработная плата"), (r"\bуволь\w*|\bуволен\w*", "расторжение трудового договора"),
+    (r"\bmerosxo['ʻ‘’`]?r\w*|\bнаследств\w*|\bнаследник\w*", "meros vorislik наследование"),
+    (r"\bворовств\w*|\bукра(л|ли|ла|сть|ден|дут)\w*|\bкраж\w*", "кража"),
 ]
 
 
@@ -252,12 +273,21 @@ def code_keys(question):
     return {k for k, t in _code_keys.items() for f in frags if f in t}
 
 
+# Частые ошибки написания: заменяем, а не дописываем («oʻgʻirlik» иначе совпадает с «ogʻir» = тяжкий).
+TYPOS = [(r"\bo['ʻ‘’`]?g['ʻ‘’`]?irlik", "oʻgʻrilik")]
+
+
 def expand(q):
+    for pat, rep in TYPOS:
+        q = re.sub(pat, rep, q, flags=re.I)
     low = q.lower()
     add = [rep for pat, rep in EXPAND if re.search(pat, low)]
-    return (q + " " + " ".join(add)) if add else q
+    cyr = bool(re.search(r"[а-яё]", low))   # в добавку берём только слова на языке вопроса
+    add = [w for rep in add for w in rep.split() if bool(re.search(r"[а-яё]", w.lower())) == cyr]
+    return (q + " " + " ".join(dict.fromkeys(add))) if add else q
 
 
+SECTION_BOOST = 0.08
 W_COV, W_HP, W_RS = 0.35, 0.25, 0.4   # вес: покрытие слов вопроса, точность заголовка, балл BM25
 
 
@@ -288,6 +318,8 @@ def retrieve(question, lang, rewritten, k, as_of=None, orig_rows=None):
             if not prev or s * weight > prev[1]:
                 cands[r["id"]] = (r, round(min(1.0, s * weight), 4))
     t_new, t_orig = terms(rewritten or ""), terms(question)
+    nq = norm(question)
+    topics = [norm(rep) for _, rep in EXPAND if norm(rep) in nq and len(rep) > 12]
     scored = []
     for r, rs in cands.values():
         cov = (0.6 * _cover(r, t_new) + 0.4 * _cover(r, t_orig)) if t_new else _cover(r, t_orig)
@@ -298,6 +330,8 @@ def retrieve(question, lang, rewritten, k, as_of=None, orig_rows=None):
             sc *= 0.6
         if r["key"] in hinted:
             sc += CODE_BOOST
+        if topics and "chapter" in r.keys() and any(t in norm(r["chapter"] or "") for t in topics):
+            sc += SECTION_BOOST   # раздел кодекса совпадает с темой (напр. «Qoʻshilgan qiymat soligʻi»)
         if r["form"] in ("Кодекс", "Конституция"):
             sc += 0.05
         elif r["form"] == "Закон":
