@@ -6,4 +6,5 @@ COPY app app
 COPY build_db.py .
 COPY data/laws.db data/laws.db
 ENV PORT=8000
-CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT}"]
+# --proxy-headers: за прокси хостинга (Fly.io, Render и т.п.) берём настоящий IP посетителя
+CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT} --proxy-headers --forwarded-allow-ips='*'"]

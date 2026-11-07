@@ -1,0 +1,14 @@
+# Ключи никогда не попадают в образ: на хостинге они задаются как секреты
+.env
+.env.*
+!.env.example
+.venv/
+**/__pycache__/
+.git/
+eval/runs/
+eval/compare/
+screenshots/
+*.zip
+data/api.db
+data/*.db-*
+data/*.tmp
