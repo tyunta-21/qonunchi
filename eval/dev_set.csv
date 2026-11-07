@@ -1,0 +1,80 @@
+id,batch,category,question,expected_answer,expected_doc_id,expected_article,answerable
+d001,b01,faktik,Xodim ish beruvchiga yetkazgan zararni qoplashi shartmi va boy berilgan foyda undiriladimi?,,lex:6257288,337-modda,true
+d002,b02,faktik,Mehnat shartnomasini ikki taraf kelishib bekor qilishi mumkinmi?,,lex:6257288,157-modda,true
+d003,b03,faktik,Ijtimoiy-mehnat masalalari boʻyicha hududiy komissiyalar qanday tuziladi?,,lex:6257288,50-modda,true
+d004,b04,faktik,Tashkilot rahbari almashsa jamoa shartnomasi amal qiladimi?,,lex:6257288,76-modda,true
+d005,b05,faktik,ajrashgandan keyin umumiy mol-mulkni qanday boʻlish mumkin,,lex:104720,27-modda,true
+d006,b06,faktik,Farzandlikka olishda qaysi shaxslar ustunlikka ega?,,lex:104720,154-modda,true
+d007,b07,faktik,Aliment toʻlash toʻgʻrisidagi kelishuvda aliment qanday usullarda toʻlanishi mumkin?,,lex:104720,134-modda,true
+d008,b08,faktik,Qayin-boʻyinchilik oʻzaro huquq va majburiyat keltirib chiqaradimi?,,lex:104720,59-modda,true
+d009,b09,faktik,Yuridik shaxs davlat roʻyxatidan oʻtkazilishi shartmi?,,lex:111189,44-modda,true
+d010,b10,faktik,Qonun bilan mulk huquqi bekor qilinsa mulkdorga zarar kim tomonidan toʻlanadi?,,lex:111189,233-modda,true
+d011,b01,faktik,Bedarak yoʻqolgan deb topilgan fuqaro qaytib kelsa nima boʻladi?,,lex:111189,35-modda,true
+d012,b02,faktik,Bitimni vakil orqali tuzish mumkinmi?,,lex:111189,130-modda,true
+d013,b03,faktik,Topshiriq shartnomasida vakil qanday majburiyatlarga ega?,,lex:180552,820-modda,true
+d014,b04,faktik,Sotib oluvchi yetkazib berilgan tovarlarni qabul qilish uchun nima qilishi kerak?,,lex:180552,446-modda,true
+d015,b05,faktik,Renta shartnomasi nima?,,lex:180552,512-modda,true
+d016,b06,faktik,Muttasil doʻpposlab qiynash uchun qanday jinoiy javobgarlik bor?,,lex:111453,110-modda,true
+d017,b07,faktik,Portlovchi moddalarni saqlash qoidalarini buzish uchun javobgarlik qanday?,,lex:111453,250-modda,true
+d018,b08,faktik,Gumon qilinuvchini qiynoqqa solish uchun qanday javobgarlik bor?,,lex:111453,235-modda,true
+d019,b09,faktik,Davlat ijrochisiga taʼsir oʻtkazib sud qarori ijrosiga toʻsqinlik qilish jinoyatmi?,,lex:111453,232^1-modda,true
+d020,b10,faktik,Maʼmuriy ish boʻyicha apellyatsiya shikoyatida nimalar koʻrsatilishi kerak?,,lex:97664,324^4-modda,true
+d021,b01,faktik,Haqorat qilganlik uchun qancha jarima solinadi?,,lex:97664,41-modda,true
+d022,b02,faktik,Poyezdda yonuvchan moddalarni olib yurish uchun maʼmuriy javobgarlik bormi?,,lex:97664,142-modda,true
+d023,b03,faktik,Mayda bezorilik uchun jazo olgan xodimning ish joyiga xabar beriladimi?,,lex:97664,312-modda,true
+d024,b04,faktik,Mol-mulk soligʻi boʻyicha boʻnak toʻlovlari qanday toʻlanadi?,,lex:4674902,448-modda,true
+d025,b05,faktik,Soliq tekshiruvida hujjatlarni olib qoʻyish qanday tartibda amalga oshiriladi?,,lex:4674902,148-modda,true
+d026,b06,faktik,Qaysi holatlarda shaxs soliq huquqbuzarligi uchun javobgarlikka tortilmaydi?,,lex:4674902,213-modda,true
+d027,b07,faktik,Vijdon erkinligi kafolatlanadimi?,,lex:6445145,35-modda,true
+d028,b08,faktik,Qoraqalpogʻiston Oʻzbekiston tarkibidan ajralib chiqishi mumkinmi?,,lex:6445145,89-modda,true
+d029,b09,faktik,Shaxsiy hayot va yozishmalar sirini himoya qilish huquqi bormi?,,lex:6445145,31-modda,true
+d030,b10,faktik,Intellektual mulk qonun bilan himoyalanadimi?,,lex:6445145,53-modda,true
+d031,b01,faktik,Prezident vazifasini bajara olmasa uning vakolatlari kimga oʻtadi?,,lex:4386848,66-modda,true
+d032,b02,faktik,Senat aʼzolari saylovi yakunlari qachon eʼlon qilinadi?,,lex:4386848,85-modda,true
+d033,b03,faktik,Siyosiy partiya deputatlikka nomzod koʻrsatishi uchun qanday shartlar bor?,,lex:4386848,68-modda,true
+d034,b04,faktik,Favqulodda holat paytida saylov oʻtkaziladimi?,,lex:4386848,8^1-modda,true
+d035,b05,faktik,Munitsipal uy-joy fondidagi kvartira ijara haqi qanday belgilanadi?,,lex:106136,129-modda,true
+d036,b06,faktik,Kvartirani almashtirish uchun qayerga ariza beriladi?,,lex:106136,111-modda,true
+d037,b07,faktik,Turar joydan umrbod foydalanish huquqi qachon vujudga keladi?,,lex:106136,121-modda,true
+d038,b08,faktik,Shahar yerlari tarkibiga qanday yerlar kiradi?,,lex:152653,59-modda,true
+d039,b09,faktik,Yer uchastkasiga huquq qachondan boshlab vujudga keladi?,,lex:152653,31-modda,true
+d040,b10,faktik,Yer uchastkasi egasining yerni saqlash boʻyicha majburiyatlari qanday?,,lex:152653,29-modda,true
+d046,b06,faktik,Davlat suv kadastrini qaysi organlar yuritadi?,,lex:7655343,44-modda,true
+d047,b07,faktik,Daryolar boʻylab suvni muhofaza qilish zonalari qanday belgilanadi?,,lex:7655343,129-modda,true
+d048,b08,faktik,Suv obyektlariga mulk huquqi kimga tegishli?,,lex:7655343,12-modda,true
+d049,b09,faktik,Maʼmuriy sud hujjatlari qanday ijroga qaratiladi?,,lex:3527353,276-modda,true
+d050,b10,faktik,Vasiylikdagi bolaga nafaqa tayinlanadimi?,,lex:2307826,40-modda,true
+d051,b01,faktik,Manfaatlar toʻqnashuvi boʻlganda mansabdor shaxs qaror qabul qila oladimi?,,lex:6952742,26-modda,true
+d052,b02,faktik,Elektron hujjat qabul qilib olingan deb qachon hisoblanadi?,,lex:165079,15-modda,true
+d053,b03,faktik,Mulkiy huquqning kafolati nimada?,,lex:111466,32-modda,true
+d054,b04,faktik,Davlat statistika organlari qanday huquqlarga ega?,,lex:5569619,14-modda,true
+d055,b05,faktik,Nodavlat arxiv tashkil etish mumkinmi?,,lex:1645540,19^1-modda,true
+d056,b06,faktik,Kimlar Oʻzbekiston fuqaroligiga alohida tartibda qabul qilinadi?,,lex:4761984,21-modda,true
+d057,b07,faktik,Davlat organining hujjati bilan mulkdorga yetkazilgan zarar qoplanadimi?,,lex:2055680,9-modda,true
+d058,b08,faktik,Jamgʻarib boriladigan pensiya daftarchasi nima?,,lex:390573,9-modda,true
+d059,b09,faktik,MChJ ustav fondi nimalardan iborat boʻladi?,,lex:8151376,15-modda,true
+d060,b10,faktik,Ichki ishlar organlari mansabdor shaxslari qanday tayinlanadi?,,lex:3027843,14-modda,true
+d061,b01,faktik,MChJda foyda ishtirokchilar oʻrtasida qanday taqsimlanadi?,,lex:8151376,27-modda,true
+d062,b02,faktik,Soliq maslahatchisining malaka sertifikati qachon bekor qilinadi?,,lex:6141486,28-modda,true
+d063,b03,faktik,Kasaba uyushmalari jamoatchilik monitoringini oʻtkaza oladimi?,,lex:4631281,42-modda,true
+d064,b04,faktik,Huquqiy axborot qanday usullarda tarqatiladi?,,lex:3329163,13-modda,true
+d065,b05,faktik,Taʼlim sohasida davlat nazoratini kim amalga oshiradi?,,lex:5013007,43-modda,true
+d066,b06,faktik,Turdosh huquqlar nimalarga nisbatan amal qiladi?,,lex:1022944,43-modda,true
+d067,b07,faktik,Nazorat qiluvchi organ mansabdorining harakati ustidan shikoyat qilish mumkinmi?,,lex:28144,19-modda,true
+d068,b08,faktik,Davlat sirlarini himoya qilishda tashkilotlarning majburiyatlari qanday?,,lex:7282637,23-modda,true
+d069,b09,faktik,Kiberxavfsizlik obyektlari qanday tasniflanadi?,,lex:5960604,17-modda,true
+d070,b10,faktik,Tirik donordan aʼzo olish shartlari qanday?,,lex:6001286,12-modda,true
+d071,b01,faktik,Tovar belgisi ekspertizasi natijasi ustidan shikoyat qilish mumkinmi?,,lex:24925,16-modda,true
+d072,b02,rus,Можно ли расторгнуть трудовой договор по соглашению сторон?,,lex:6257288,157-modda,true
+d073,b03,rus,Как делится общее имущество супругов?,,lex:104720,27-modda,true
+d074,b04,rus,"Что будет, если лицо, признанное безвестно отсутствующим, вернется?",,lex:111189,35-modda,true
+d075,b05,rus,Какая ответственность за истязание?,,lex:111453,110-modda,true
+d076,b06,rus,Какой штраф за оскорбление?,,lex:97664,41-modda,true
+d077,b07,rus,Проводятся ли выборы во время чрезвычайного положения?,,lex:4386848,8^1-modda,true
+d078,b08,rus,Предоставляется ли общежитие студентам?,,lex:106136,82-modda,true
+d079,b09,rus,В каких случаях отказывают в признании безработным?,,lex:5055690,45-modda,true
+d080,b10,rus,В какой очередности удовлетворяются требования кредиторов при банкротстве?,,lex:5957612,150-modda,true
+d081,b01,rus,Какие условия изъятия органов у живого донора?,,lex:6001286,12-modda,true
+d082,b02,noaniq,ishda buzib qoʻygan narsam uchun ish beruvchi maoshimdan pul ushlab qolishi mumkinmi,,lex:6257288,337-modda,true
+d083,b03,noaniq,meni soʻkib haqorat qilishdi qanday jazo bor,,lex:97664,41-modda,true
+d084,b04,noaniq,uyda uzoq vaqt yashamasam kvartiradan chiqarib yuborishlari mumkinmi,,lex:106136,54-modda,true

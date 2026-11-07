@@ -15,7 +15,7 @@ from . import db, llm
 from .textnorm import norm, terms
 from .translit import detect, cyr_to_lat, db_lang
 
-PIPELINE_VERSION = "0.3.0"
+PIPELINE_VERSION = "0.3.1"
 SYNC_TIMEOUT = float(os.environ.get("RAG_SYNC_TIMEOUT", "110"))
 ITEM_TIMEOUT = float(os.environ.get("RAG_ITEM_TIMEOUT", "60"))
 WORKERS = int(os.environ.get("RAG_WORKERS", "10"))
@@ -122,11 +122,23 @@ def _iso(d):
     return f"{m[3]}-{m[2]}-{m[1]}" if m else None
 
 
+_NUM_ONLY = re.compile(r"^\s*(Статья\s+)?[\d^¹²³.-]+(-modda)?\.?\s*$")
+
+
+def _heading(row):
+    """Заголовок статьи; у статей без названия (Конституция) — первое предложение текста."""
+    h = row["heading"] or ""
+    if _NUM_ONLY.match(h):
+        t = re.sub(r"\[Примечание:[^\]]*\]", "", row["text"] or "").strip()
+        h = h + " " + re.split(r"(?<=[.;:])\s", t, 1)[0][:160]
+    return h
+
+
 def _cover(row, ts):
     """Доля слов вопроса в заголовке статьи (1.0), тексте (0.6) или названии документа (0.5)."""
     if not ts:
         return 0.0
-    h, t, d = norm(row["heading"]), norm(row["text"]), norm(row["doc_title"])
+    h, t, d = norm(_heading(row)), norm(row["text"]), norm(row["doc_title"])
     c = norm(row["chapter"] or "") if "chapter" in row.keys() else ""
     return sum(1.0 if w in h else (0.7 if w in c else (0.6 if w in t else (0.5 if w in d else 0.0))) for w in ts) / len(ts)
 
@@ -156,7 +168,7 @@ def chapter_candidates(ts, lang):
 
 def _head_precision(row, ts):
     """Доля слов заголовка статьи, совпавших со словами вопроса: короткий точный заголовок лучше длинного."""
-    words = [w for w in re.findall(r"\w+", norm(re.sub(r"^(Статья\s+)?[\d^¹²³.-]+(-modda)?\.?\s*", "", row["heading"] or "")))
+    words = [w for w in re.findall(r"\w+", norm(re.sub(r"^(Статья\s+)?[\d^¹²³.-]+(-modda)?\.?\s*", "", _heading(row))))
              if len(w) > 2]
     if not words or not ts:
         return 0.0
