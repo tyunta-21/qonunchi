@@ -7,3 +7,4 @@ data/*.db-*
 eval/runs/
 *.zip
 .fly-app
+.gcp-project

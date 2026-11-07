@@ -1,11 +1,11 @@
 # Qonunchi — tekshiruvchi uchun qoʻllanma / Инструкция для проверяющего
 
-**Sayt / Сайт:** https://SAYT-MANZILI.fly.dev  ← *(talaba yuboradi / студент пришлёт ссылку)*
+**Sayt / Сайт:** https://SAYT-MANZILI  ← *(talaba yuboradi / студент пришлёт ссылку)*
 **API kaliti / Ключ API:** talaba alohida yuboradi / студент пришлёт отдельно
 **Kod / Код:** https://github.com/tyunta-21/qonunchi
 
-Sayt bulutda (Fly.io) doim ishlaydi, talabaning kompyuteri kerak emas.
-Сайт работает в облаке (Fly.io) круглосуточно, компьютер студента для этого не нужен.
+Sayt bulutda ishlaydi, talabaning kompyuteri kerak emas.
+Сайт работает в облаке, компьютер студента для этого не нужен.
 
 ---
 
@@ -33,7 +33,7 @@ Barcha soʻrovlarda sarlavha / Во всех запросах заголовок
 
 Misol / Пример:
 ```
-curl -X POST https://SAYT-MANZILI.fly.dev/v1/rag/query \
+curl -X POST https://SAYT-MANZILI/v1/rag/query \
   -H "Authorization: Bearer KALIT" -H "Content-Type: application/json" \
   -d '{"question": "Nikoh yoshi necha yosh?"}'
 ```
@@ -43,7 +43,7 @@ curl -X POST https://SAYT-MANZILI.fly.dev/v1/rag/query \
 Python 3.10+ kerak / Нужен Python 3.10+:
 ```
 git clone https://github.com/tyunta-21/qonunchi && cd qonunchi
-python3 eval/run_eval.py eval/testset_100.csv --url https://SAYT-MANZILI.fly.dev --key KALIT
+python3 eval/run_eval.py eval/testset_100.csv --url https://SAYT-MANZILI --key KALIT
 python3 eval/report.py eval/testset_100.csv
 ```
 O'zingizning savollaringiz bilan ham ishlaydi: CSV formati TZ (6-boʻlim) dagidek.
