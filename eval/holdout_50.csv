@@ -1,0 +1,51 @@
+id,batch,category,question,expected_answer,expected_doc_id,expected_article,answerable
+h001,b01,faktik,Mehnat shartnomasi qanday shaklda tuziladi?,Yozma shaklda,lex:6257288,106-modda,true
+h002,b01,noaniq,ishdan boʻshatishsa qancha pul berishadi,Ishdan boʻshatish nafaqasi,lex:6257288,173-modda,true
+h003,b01,raqamlar,Tunda ishlaganga qancha qoʻshimcha haq toʻlanadi?,Tungi vaqtdagi mehnat uchun oshirilgan haq,lex:6257288,264-modda,true
+h004,b01,faktik,Dam olish kuni ishlasam qanday haq toʻlanadi?,Kamida ikki baravar miqdorda,lex:6257288,263-modda,true
+h005,b01,faktik,Xodim qachon moddiy javobgar boʻladi?,Moddiy javobgarlik tushunchasi,lex:6257288,316-modda,true
+h006,b02,faktik,Intizomiy jazo qoʻllashdan oldin xodimdan nima talab qilinadi?,Yozma tushuntirish,lex:6257288,313-modda,true
+h007,b02,faktik,Intizomiy jazo qancha vaqt amal qiladi?,Bir yil,lex:6257288,315-modda,true
+h008,b02,noaniq,oʻz hisobimdan otpusk olsam boʻladimi,Ish haqi saqlanmaydigan taʼtil,lex:6257288,241-modda,true
+h009,b02,faktik,Homilador ayolni yengilroq ishga oʻtkazish mumkinmi?,Ha,lex:6257288,394-modda,true
+h010,b02,faktik,Homiladorligi sababli ishga olmaslik mumkinmi?,Yoʻq,lex:6257288,392-modda,true
+h011,b03,raqamlar,Bayram arafasida ish kuni necha soatga qisqaradi?,Bir soatga,lex:6257288,187-modda,true
+h012,b03,faktik,Ishga qabul qilinganda ish beruvchi qanday hujjat chiqaradi?,Ishga qabul qilish toʻgʻrisida buyruq,lex:6257288,127-modda,true
+h013,b03,faktik,Ota-ona voyaga yetgan bolaga aliment toʻlashi shartmi?,Mehnatga layoqatsiz muhtoj boʻlsa,lex:104720,100-modda,true
+h014,b03,faktik,Aliment hisoblashda qaysi daromadlar hisobga olinadi?,Aliment undirishda hisobga olinadigan daromadlar,lex:104720,104-modda,true
+h015,b03,noaniq,erim ajrashishga rozi emas sud orqali boʻladimi,Sud nikohdan ajratadi,lex:104720,41-modda,true
+h016,b04,faktik,Er-xotin rozi boʻlsa nikoh qayerda bekor qilinadi?,FHDYo organlarida,lex:104720,42-modda,true
+h017,b04,faktik,Ajrashgandan keyin familiyani qaytarish mumkinmi?,Ha,lex:104720,46-modda,true
+h018,b04,faktik,Nikohdan oʻtishda er va xotin qanday familiya tanlashi mumkin?,Birining familiyasini yoki oʻz familiyasini,lex:104720,20-modda,true
+h019,b04,faktik,Nikoh shartnomasida nimalarni belgilash mumkin?,Mulkiy huquq va majburiyatlarni,lex:104720,31-modda,true
+h020,b04,faktik,Farzandlikka olishda kimlar ustunlik huquqiga ega?,Bolaning qarindoshlari,lex:104720,154-modda,true
+h021,b05,faktik,Nikoh davomida orttirilgan mol-mulk kimniki?,Er va xotinning umumiy mulki,lex:104720,23-modda,true
+h022,b05,faktik,Qanday hollarda ota-onalik huquqidan mahrum qilinadi?,Ota-onalik majburiyatlarini bajarishdan boʻyin tovlaganda va boshqa hollarda,lex:104720,79-modda,true
+h023,b05,noaniq,ajrashgan erim bolani koʻrishga haqlimi,Boladan alohida yashayotgan ota ota-onalik huquqini amalga oshiradi,lex:104720,76-modda,true
+h024,b05,faktik,Ishonchnoma nima?,Vakillik uchun yozma vakolat,lex:111189,134-modda,true
+h025,b05,raqamlar,Ishonchnoma necha yilgacha beriladi?,Uch yildan oshmagan muddatga,lex:111189,139-modda,true
+h026,b06,faktik,Daʼvo muddati qachondan boshlanadi?,Shaxs oʻz huquqi buzilganini bilgan kundan,lex:111189,154-modda,true
+h027,b06,faktik,Qachon fuqaroning muomala layoqati cheklanadi?,Spirtli ichimlik yoki giyohvandlik tufayli oilani ogʻir moddiy ahvolga solsa,lex:111189,31-modda,true
+h028,b06,faktik,Bitim nima?,Fuqarolik huquq va burchlarini vujudga keltirishga qaratilgan harakatlar,lex:111189,101-modda,true
+h029,b06,faktik,Vasiyatnoma qanday shaklda tuziladi?,Yozma shaklda notarial tasdiqlanadi,lex:180552,1124-modda,true
+h030,b06,faktik,Vasiyatnomani oʻzgartirish yoki bekor qilish mumkinmi?,Ha istalgan vaqtda,lex:180552,1127-modda,true
+h031,b07,noaniq,otam vasiyatda menga hech narsa qoldirmadi lekin men nogironman,Merosdan majburiy ulush,lex:180552,1142-modda,true
+h032,b07,faktik,Mulk ijarasi shartnomasi nima?,Ijaraga beruvchi mol-mulkni haq evaziga vaqtincha egalik va foydalanishga beradi,lex:180552,535-modda,true
+h033,b07,faktik,Ijara shartnomasi qancha muddatga tuziladi?,Shartnomada belgilangan muddatga,lex:180552,540-modda,true
+h034,b07,faktik,Qarz shartnomasi qanday shaklda tuzilishi kerak?,Yozma shaklda,lex:180552,733-modda,true
+h035,b07,faktik,Qarz shartnomasi boʻyicha foiz olinadimi?,Ha agar boshqacha belgilanmagan boʻlsa,lex:180552,734-modda,true
+h036,b08,faktik,Jinoyat kodeksiga koʻra talonchilik nima?,Oʻzganing mol-mulkini ochiqdan-ochiq talon-toroj qilish,lex:111453,166-modda,true
+h037,b08,faktik,Tovlamachilik uchun qanday jazo bor?,Tovlamachilik,lex:111453,165-modda,true
+h038,b08,faktik,Qasddan odam oʻldirganlik uchun jazo qanday?,Ozodlikdan mahrum qilish,lex:111453,97-modda,true
+h039,b08,faktik,Jinoyat deb nimaga aytiladi?,Jinoyat kodeksi bilan taqiqlangan aybli ijtimoiy xavfli qilmish,lex:111453,14-modda,true
+h040,b08,noaniq,oʻzimni himoya qilib hujumchini urib qoʻysam javob beramanmi,Zaruriy mudofaa,lex:111453,37-modda,true
+h041,b09,faktik,Shartli hukm qilish nima?,Jazoni oʻtamasdan sinov muddati,lex:111453,72-modda,true
+h042,b09,faktik,Umrbod ozodlikdan mahrum qilish kimlarga tayinlanmaydi?,Ayollar va voyaga yetmaganlarga,lex:111453,51-modda,true
+h043,b09,faktik,Maʼmuriy jarima qanday miqdorda solinadi?,BHM ga karrali miqdorda,lex:97664,25-modda,true
+h044,b09,raqamlar,QQS boʻyicha soliq davri qancha?,Bir oy,lex:4674902,259-modda,true
+h045,b09,rus_kirill,Какой срок испытания при приеме на работу?,Не более трех месяцев,lex:6257288,130-modda,true
+h046,b10,rus_kirill,Что такое мошенничество по Уголовному кодексу?,Завладение имуществом путем обмана,lex:111453,168-modda,true
+h047,b10,rus_kirill,С какого возраста можно вступить в брак?,С восемнадцати лет,lex:104720,15-modda,true
+h048,b10,rus_kirill,В какой форме заключается договор займа?,В письменной форме,lex:180552,733-modda,true
+h049,b10,rus_kirill,Ишонч қоғози қанча муддатга берилади?,Уч йилдан ошмаган муддатга,lex:111189,139-modda,true
+h050,b10,rus_kirill,Мерос бўйича мажбурий улуш кимга берилади?,Вояга етмаган ва меҳнатга лаёқатсиз болалар ва бошқаларга,lex:180552,1142-modda,true

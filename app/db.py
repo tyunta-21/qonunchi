@@ -142,3 +142,34 @@ def retrieve(question, lang, k=8, extra_query=None):
         pool += _rerank(list(rows), extra_query or question, k - len(pool))
     # чередуем: лучшие по ключевым словам ИИ и по исходному вопросу
     return pool[: k + (2 if extra_query else 0)]
+
+
+_ART_SELECT = ("SELECT a.*, d.title doc_title, d.form, d.date, d.number, d.active, d.status_warning, d.amending, "
+               "d.doc_status, d.edition_date, '' snip, 0.0 score FROM articles a "
+               "JOIN docs d ON d.key=a.key AND d.lang=a.lang ")
+
+
+def articles_by_ids(ids):
+    if not ids:
+        return []
+    q = ",".join("?" * len(ids))
+    return conn().execute(_ART_SELECT + f"WHERE a.id IN ({q})", list(ids)).fetchall()
+
+
+_chapters = {}
+_chap_lock = threading.Lock()
+
+
+def code_chapters(lang):
+    """Главы и разделы действующих кодексов и Конституции: [(norm(название главы), [id статей])]. Кэш в памяти."""
+    if lang in _chapters:
+        return _chapters[lang]
+    with _chap_lock:   # строим один раз, даже если сразу пришло 10 вопросов
+        if lang not in _chapters:
+            by = {}
+            for r in conn().execute("SELECT a.id, a.chapter FROM articles a JOIN docs d ON d.key=a.key AND d.lang=a.lang "
+                                    "WHERE a.lang=? AND d.active=1 AND d.form IN ('Кодекс','Конституция') "
+                                    "AND a.chapter IS NOT NULL AND a.chapter<>''", (lang,)):
+                by.setdefault(norm(r["chapter"]), []).append(r["id"])
+            _chapters[lang] = list(by.items())
+    return _chapters[lang]

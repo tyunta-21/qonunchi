@@ -1,0 +1,21 @@
+id,batch,category,question,expected_answer,expected_doc_id,expected_article,answerable
+k01,b01,faktik,Xodimni dam olish kuni ishga chaqirish uchun uning roziligi kerakmi?,Ha,lex:6257288,210-modda,true
+k02,b01,noaniq,taʼtil paytida maosh toʻlanadimi,Oʻrtacha ish haqi saqlanadi,lex:6257288,233-modda,true
+k03,b01,faktik,Sinov muddati natijasi qoniqarsiz boʻlsa nima boʻladi?,Mehnat shartnomasi bekor qilinishi mumkin,lex:6257288,132-modda,true
+k04,b01,faktik,Aliment qanday tartibda toʻlanadi?,Kelishuv yoki sud qarori boʻyicha,lex:104720,98-modda,true
+k05,b02,faktik,Ota-onalik huquqidan mahrum qilish qanday tartibda amalga oshiriladi?,Sud tartibida,lex:104720,80-modda,true
+k06,b02,faktik,Ishonchnoma qanday shaklda rasmiylashtiriladi?,Yozma shaklda,lex:111189,135-modda,true
+k07,b02,faktik,Bitimlar qanday shaklda tuziladi?,Ogʻzaki yoki yozma,lex:111189,105-modda,true
+k08,b02,faktik,Shartli vasiyatnoma tuzish mumkinmi?,Ha,lex:180552,1121-modda,true
+k09,b03,faktik,Uy ijarasi shartnomasi yozma tuzilishi kerakmi?,Bir yildan ortiq boʻlsa yozma,lex:180552,539-modda,true
+k10,b03,noaniq,qarz olgan odam pulni qachon qaytarishi kerak,Shartnomada belgilangan muddatda,lex:180552,735-modda,true
+k11,b03,faktik,Pora olish-berishda vositachilik qilganlik uchun javobgarlik bormi?,Ha,lex:111453,212-modda,true
+k12,b03,faktik,Talonchilik bilan bosqinchilik uchun jazo qaysi moddalarda?,Talonchilik 166-modda,lex:111453,166-modda,true
+k13,b04,noaniq,qarzni foizi bilan qaytarishim kerakmi,Qarz shartnomasi boʻyicha foizlar,lex:180552,734-modda,true
+k14,b04,faktik,Mehnat shartnomasi bekor qilinganda ishdan boʻshatish nafaqasi qancha?,Oʻrtacha oylik ish haqi miqdorida,lex:6257288,173-modda,true
+k15,b04,faktik,Er va xotin umumiy mulkni qanday taqsimlaydi?,Teng ulushlarda,lex:104720,23-modda,true
+k16,b04,rus_kirill,Что такое договор аренды имущества?,Арендодатель предоставляет имущество за плату во временное пользование,lex:180552,535-modda,true
+k17,b05,rus_kirill,Можно ли отменить завещание?,Да в любое время,lex:180552,1127-modda,true
+k18,b05,rus_kirill,Что считается необходимой обороной?,Защита от общественно опасного посягательства,lex:111453,37-modda,true
+k19,b05,rus_kirill,Какое наказание за вымогательство?,Вымогательство,lex:111453,165-modda,true
+k20,b05,rus_kirill,Сколько длится срок исковой давности?,Три года,lex:111189,150-modda,true
