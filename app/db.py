@@ -67,27 +67,42 @@ def catalog(lang, form=None, status="active", year=None, q=None, page=1, per=30)
     return rows, total
 
 
+_HAS_MAP = None
+
+
+def _has_map():
+    global _HAS_MAP
+    if _HAS_MAP is None:
+        _HAS_MAP = bool(conn().execute("SELECT 1 FROM sqlite_master WHERE name='art_map'").fetchone())
+    return _HAS_MAP
+
+
 def search_articles(q, lang, limit=20, offset=0, active_only=False, key=None, mode="OR", count=True):
     fq = fts_query(q, mode)
     if not fq:
         return [], 0
+    # a = маленькая art_map (id, key, lang), если есть: сортировка не трогает тексты статей
+    src = "art_map" if _has_map() else "articles"
     where = "art_fts MATCH ? AND a.lang=?"
     args = [fq, lang]
     if active_only:
         where += " AND d.active=1"
     if key:
         where += " AND a.key=?"; args.append(int(key))
-    base = (f"FROM art_fts JOIN articles a ON a.id=art_fts.rowid "
+    base = (f"FROM art_fts JOIN {src} a ON a.id=art_fts.rowid "
             f"JOIN docs d ON d.key=a.key AND d.lang=a.lang WHERE {where}")
     # count(*) — лишний полный проход по совпадениям; для ИИ-поиска он не нужен
     total = conn().execute(f"SELECT count(*) {base}", args).fetchone()[0] if count else None
+    top = (f"SELECT art_fts.rowid rid, snippet(art_fts, 1, '[[', ']]', ' … ', 28) snip, "
+           f"bm25(art_fts, 4.0, 1.0, 2.5) - (CASE WHEN d.active=1 THEN 3 ELSE 0 END) "
+           f"- (CASE d.form WHEN 'Конституция' THEN 2.0 WHEN 'Кодекс' THEN 2.0 "
+           f"WHEN 'Закон' THEN 1.2 WHEN 'Постановление' THEN -0.5 ELSE 0 END) score "
+           f"{base} ORDER BY score LIMIT ? OFFSET ?")
     rows = conn().execute(
-        f"SELECT a.*, d.title doc_title, d.form, d.date, d.number, d.active, d.status_warning, d.amending, d.doc_status, d.edition_date, "
-        f"snippet(art_fts, 1, '[[', ']]', ' … ', 28) snip, "
-        f"bm25(art_fts, 4.0, 1.0, 2.5) - (CASE WHEN d.active=1 THEN 3 ELSE 0 END) "
-        f"- (CASE d.form WHEN 'Конституция' THEN 2.0 WHEN 'Кодекс' THEN 2.0 "
-        f"WHEN 'Закон' THEN 1.2 WHEN 'Постановление' THEN -0.5 ELSE 0 END) score "
-        f"{base} ORDER BY score LIMIT ? OFFSET ?", args + [limit, offset]).fetchall()
+        f"SELECT a.*, d.title doc_title, d.form, d.date, d.number, d.active, d.status_warning, d.amending, "
+        f"d.doc_status, d.edition_date, s.snip, s.score FROM ({top}) s "
+        f"JOIN articles a ON a.id=s.rid JOIN docs d ON d.key=a.key AND d.lang=a.lang ORDER BY s.score",
+        args + [limit, offset]).fetchall()
     return rows, total
 
 

@@ -7,6 +7,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 ARG DB_URL=https://github.com/tyunta-21/qonunchi/releases/download/db-v1/laws.db
 RUN mkdir -p data && python -c "import urllib.request,sys; urllib.request.urlretrieve(sys.argv[1], 'data/laws.db')" "$DB_URL" \
  && python -c "import sqlite3; print('docs:', sqlite3.connect('data/laws.db').execute('select count(*) from sqlite_master').fetchone())"
+COPY prepare_db.py .
+RUN python prepare_db.py data/laws.db
 COPY app app
 COPY build_db.py .
 ENV PORT=10000
