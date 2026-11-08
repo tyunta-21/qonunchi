@@ -34,7 +34,7 @@ if [ ! -s "$ENVF" ]; then
   read -r -p "  Вставьте RAG_API_KEYS (ключ для учителя из .env) и нажмите Enter: " RKEY
   [ -n "$OKEY" ] || fail "Пустой OPENAI_API_KEY."
   umask 077
-  printf 'AI_PROVIDER=openai\nOPENAI_API_KEY=%s\nOPENAI_MODEL=gpt-4.1-mini\nRAG_API_KEYS=%s\nCHAT_LIMIT_PER_HOUR=30\n' "$OKEY" "$RKEY" > "$ENVF"
+  printf 'AI_PROVIDER=openai\nOPENAI_API_KEY=%s\nOPENAI_MODEL=gpt-4.1-mini\nRAG_API_KEYS=%s\nCHAT_LIMIT_PER_HOUR=30\nRAG_WORKERS=3\n' "$OKEY" "$RKEY" > "$ENVF"
 fi
 
 echo "4/5 Собираю сайт и скачиваю базу законов (~1 ГБ, 5–10 минут)…"

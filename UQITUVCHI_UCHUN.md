@@ -1,11 +1,11 @@
 # Qonunchi — tekshiruvchi uchun qoʻllanma / Инструкция для проверяющего
 
-**Sayt / Сайт:** https://qonunchi.onrender.com
+**Sayt / Сайт:** http://3.27.43.72
 **API kaliti / Ключ API:** talaba alohida yuboradi / студент пришлёт отдельно
 **Kod / Код:** https://github.com/tyunta-21/qonunchi
 
-Sayt bulutda ishlaydi, talabaning kompyuteri kerak emas. Bepul tarif: 15 daqiqa ishlatilmasa sayt "uxlaydi", birinchi ochilish ~1 daqiqa olishi mumkin, keyin tez ishlaydi.
-Сайт работает в облаке, компьютер студента для этого не нужен. Бесплатный тариф: если сайтом 15 минут не пользуются, он «засыпает», и первое открытие может занять около минуты, дальше всё быстро.
+Sayt bulutda (AWS) doimiy ishlaydi, talabaning kompyuteri kerak emas.
+Сайт постоянно работает в облаке (AWS), компьютер студента для этого не нужен.
 
 ---
 
@@ -33,7 +33,7 @@ Barcha soʻrovlarda sarlavha / Во всех запросах заголовок
 
 Misol / Пример:
 ```
-curl -X POST https://qonunchi.onrender.com/v1/rag/query \
+curl -X POST http://3.27.43.72/v1/rag/query \
   -H "Authorization: Bearer KALIT" -H "Content-Type: application/json" \
   -d '{"question": "Nikoh yoshi necha yosh?"}'
 ```
@@ -43,7 +43,7 @@ curl -X POST https://qonunchi.onrender.com/v1/rag/query \
 Python 3.10+ kerak / Нужен Python 3.10+:
 ```
 git clone https://github.com/tyunta-21/qonunchi && cd qonunchi
-python3 eval/run_eval.py eval/testset_100.csv --url https://qonunchi.onrender.com --key KALIT
+python3 eval/run_eval.py eval/testset_100.csv --url http://3.27.43.72 --key KALIT
 python3 eval/report.py eval/testset_100.csv
 ```
 O'zingizning savollaringiz bilan ham ishlaydi: CSV formati TZ (6-boʻlim) dagidek.
