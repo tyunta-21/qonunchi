@@ -15,7 +15,7 @@ from . import db, llm
 from .textnorm import norm, terms
 from .translit import detect, cyr_to_lat, db_lang
 
-PIPELINE_VERSION = "0.3.1"
+PIPELINE_VERSION = "0.3.2"
 SYNC_TIMEOUT = float(os.environ.get("RAG_SYNC_TIMEOUT", "110"))
 ITEM_TIMEOUT = float(os.environ.get("RAG_ITEM_TIMEOUT", "60"))
 WORKERS = int(os.environ.get("RAG_WORKERS", "10"))
@@ -221,6 +221,8 @@ def _search(q, lang):
 # Сокращения и разговорные слова -> термины закона. Добавляются к вопросу перед поиском
 # (дёшево и детерминированно; ИИ-переписывание запроса идёт отдельно).
 EXPAND = [
+    (r"\boav\b|\bомм\b", "ommaviy axborot vositalari средства массовой информации"),
+    (r"\bсми\b", "средства массовой информации"),
     (r"\bqqs\b", "qoʻshilgan qiymat soligʻi"), (r"\bндс\b", "налог на добавленную стоимость"),
     (r"\bjshds\b", "jismoniy shaxslardan olinadigan daromad soligʻi"), (r"\bндфл\b", "налог на доходы физических лиц"),
     (r"\bbhm\b", "bazaviy hisoblash miqdori"), (r"\bбрв\b", "базовая расчетная величина"),
@@ -545,10 +547,26 @@ def answer_item(item, opts):
                 {"input_tokens": 0, "output_tokens": 0}
         else:
             user = f"Contexts:\n\n{_contexts_block(ctxs)}\n\nQuestion: {question}"
-            text, u2 = _llm_text(GEN_SYSTEM.format(lang_name=LANG_NAME[alang]), user, json_mode=True,
-                                 temperature=opts.get("temperature", 0), seed=opts.get("seed"))
-            m = re.search(r"\{.*\}", text, re.S)
-            out = json.loads(m.group(0) if m else text)
+            # Retry transient provider failures and invalid model JSON once.
+            for attempt in range(2):
+                try:
+                    text, u2 = _llm_text(GEN_SYSTEM.format(lang_name=LANG_NAME[alang]), user, json_mode=True,
+                                         temperature=opts.get("temperature", 0), seed=opts.get("seed"))
+                    m = re.search(r"\{.*\}", text, re.S)
+                    out = json.loads(m.group(0) if m else text)
+                    if not isinstance(out, dict) or not all(
+                        key in out for key in ("answer", "no_answer", "citations", "confidence")
+                    ):
+                        raise ValueError("Incomplete model JSON")
+                    break
+                except Exception as exc:
+                    name = type(exc).__name__
+                    transient = isinstance(exc, ValueError) or any(
+                        word in name for word in ("Timeout", "Connection", "RateLimit", "InternalServer")
+                    )
+                    if attempt or not transient:
+                        raise
+                    time.sleep(0.5)
     except Exception as e:
         name = type(e).__name__
         code = "LLM_TIMEOUT" if "Timeout" in name else "LLM_ERROR"
