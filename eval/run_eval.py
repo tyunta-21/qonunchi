@@ -8,6 +8,7 @@
 акты, доля ошибок, латентность p50/p95. Correctness и faithfulness нужно оценивать вручную или LLM-судьёй.
 """
 import argparse, csv, datetime, json, os, statistics, sys, time, urllib.request
+import urllib.error
 
 
 def post(url, key, body):
@@ -66,6 +67,7 @@ def main():
         print(f"{b}: {resp['summary']}  {resp['timing']['total_ms']} ms")
 
     hit_doc = hit_art = rr = n = 0; na_ok = na_total = 0; fake = stale = errors = 0; lat = []; report = []
+    precision_sum = 0.0; recall_sum = 0.0; retrieval_evaluable = 0
     for r in rows:
         res = results.get(r["id"], {})
         ctx = res.get("contexts") or []
@@ -87,10 +89,23 @@ def main():
                      and (not r["expected_article"] or art(c["article"]) == art(r["expected_article"]))), None)
         ha = rank is not None and rank <= 5 if r["expected_article"] else hd
         hit_doc += hd; hit_art += ha; rr += 1 / rank if rank else 0
+        # A single expected source cannot establish full multi-source recall/precision.
+        # Report single-reference recall@5 and precision@5 proxy separately.
+        if r["expected_doc_id"] and r["expected_article"]:
+            relevant = [c for c in top5 if c.get("doc_id") == r["expected_doc_id"]
+                        and art(c.get("article")) == art(r["expected_article"])]
+            precision_sum += len(relevant) / 5
+            recall_sum += float(bool(relevant))
+            retrieval_evaluable += 1
         report.append((r["id"], f"doc {'+' if hd else '-'} art {'+' if ha else '-'} rank {rank}", (res.get("answer") or "")[:120]))
     m = {"run_id": run_id, "questions": len(rows),
          "hit5_doc": round(hit_doc / n, 3) if n else None, "hit5_article": round(hit_art / n, 3) if n else None,
-         "mrr": round(rr / n, 3) if n else None, "no_answer_accuracy": f"{na_ok}/{na_total}",
+         "mrr": round(rr / n, 3) if n else None,
+         "single_reference_recall_at5": round(recall_sum / retrieval_evaluable, 3) if retrieval_evaluable else None,
+         "single_reference_precision_at5_proxy": round(precision_sum / retrieval_evaluable, 3) if retrieval_evaluable else None,
+         "retrieval_evaluable_questions": retrieval_evaluable,
+         "retrieval_metric_note": "Single gold article only; full Recall@5 and Context Precision require all relevant articles annotated.",
+         "no_answer_accuracy": f"{na_ok}/{na_total}",
          "fabricated_citations": fake, "stale_citations": stale, "error_rate": round(errors / len(rows), 3),
          "latency_p50_ms": int(statistics.median(lat)) if lat else None,
          "latency_p95_ms": int(sorted(lat)[max(0, int(len(lat) * 0.95) - 1)]) if lat else None}
