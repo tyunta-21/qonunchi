@@ -82,7 +82,7 @@ def search_articles(q, lang, limit=20, offset=0, active_only=False, key=None, mo
     # count(*) — лишний полный проход по совпадениям; для ИИ-поиска он не нужен
     total = conn().execute(f"SELECT count(*) {base}", args).fetchone()[0] if count else None
     rows = conn().execute(
-        f"SELECT a.*, d.title doc_title, d.form, d.date, d.number, d.active, d.status_warning, d.amending, d.doc_status, d.edition_date, "
+        f"SELECT a.*, d.title doc_title, d.form, d.date, d.number, d.active, d.status_warning, d.amending, d.doc_status, d.edition_date, d.n_articles, "
         f"snippet(art_fts, 1, '[[', ']]', ' … ', 28) snip, "
         f"bm25(art_fts, 4.0, 1.0, 2.5) - (CASE WHEN d.active=1 THEN 3 ELSE 0 END) "
         f"- (CASE d.form WHEN 'Конституция' THEN 2.0 WHEN 'Кодекс' THEN 2.0 "
@@ -145,7 +145,7 @@ def retrieve(question, lang, k=8, extra_query=None):
 
 
 _ART_SELECT = ("SELECT a.*, d.title doc_title, d.form, d.date, d.number, d.active, d.status_warning, d.amending, "
-               "d.doc_status, d.edition_date, '' snip, 0.0 score FROM articles a "
+               "d.doc_status, d.edition_date, d.n_articles, '' snip, 0.0 score FROM articles a "
                "JOIN docs d ON d.key=a.key AND d.lang=a.lang ")
 
 

@@ -20,6 +20,11 @@ def _load_env():
 
 
 _load_env()
+# QONUNCHI_X=... (например в .env внутри контейнера) заменяет X из окружения docker:
+# QONUNCHI_OPENAI_API_KEY, QONUNCHI_OPENAI_BASE_URL (Gemini/DeepSeek через OpenAI-совместимый API), QONUNCHI_OPENAI_KW_MODEL
+for _k, _v in list(os.environ.items()):
+    if _k.startswith("QONUNCHI_") and _v:
+        os.environ[_k[len("QONUNCHI_"):]] = _v
 
 PROVIDER = os.environ.get("AI_PROVIDER", "").strip().lower()
 if not PROVIDER:
@@ -28,7 +33,8 @@ if not PROVIDER:
 
 CLAUDE_MODEL = os.environ.get("CLAUDE_MODEL", "claude-opus-5-5")
 CLAUDE_EFFORT = os.environ.get("CLAUDE_EFFORT", "low")
-OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "gpt-4.1-mini")
+# QONUNCHI_OPENAI_MODEL (можно задать в .env) важнее OPENAI_MODEL из окружения docker
+OPENAI_MODEL = os.environ.get("QONUNCHI_OPENAI_MODEL") or os.environ.get("OPENAI_MODEL", "gpt-4.1-mini")
 OPENAI_KW_MODEL = os.environ.get("OPENAI_KW_MODEL", OPENAI_MODEL)
 CLAUDE_KW_MODEL = os.environ.get("CLAUDE_KW_MODEL", "claude-haiku-5-5")
 MAX_CONTEXT_CHARS = 2500  # сколько символов каждой статьи отдаём модели
