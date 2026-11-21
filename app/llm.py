@@ -28,7 +28,8 @@ if not PROVIDER:
 
 CLAUDE_MODEL = os.environ.get("CLAUDE_MODEL", "claude-opus-5-5")
 CLAUDE_EFFORT = os.environ.get("CLAUDE_EFFORT", "low")
-OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "gpt-4.1-mini")
+# QONUNCHI_OPENAI_MODEL (можно задать в .env) важнее OPENAI_MODEL из окружения docker
+OPENAI_MODEL = os.environ.get("QONUNCHI_OPENAI_MODEL") or os.environ.get("OPENAI_MODEL", "gpt-4.1-mini")
 OPENAI_KW_MODEL = os.environ.get("OPENAI_KW_MODEL", OPENAI_MODEL)
 CLAUDE_KW_MODEL = os.environ.get("CLAUDE_KW_MODEL", "claude-haiku-5-5")
 MAX_CONTEXT_CHARS = 2500  # сколько символов каждой статьи отдаём модели
