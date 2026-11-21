@@ -253,6 +253,9 @@ EXPAND = [
     (r"\bmerosxo['ʻ‘’`]?r\w*|\bнаследств\w*|\bнаследник\w*", "meros vorislik наследование"),
     (r"\bmurojaat\w*.*(muddat|koʻrib|ko'rib|korib)|\bобращени\w*.*срок", "jismoniy va yuridik shaxslarning murojaatlari koʻrib chiqish muddatlari рассмотрение обращений физических и юридических лиц"),
     (r"\bfarmon\w*.*\bqaror\w*|\bqaror\w*.*\bfarmon\w*|\bуказ\w*.*постановлен\w*", "Prezident farmonlari va qarorlari normativ-huquqiy hujjatlar turlari указы и постановления Президента виды нормативно-правовых актов"),
+    (r"\bierarxiya\w*|\bиерархи\w*", "normativ-huquqiy hujjatlarning yuridik kuchi boʻyicha nisbati turlari соотношение нормативно-правовых актов по юридической силе"),
+    (r"kuchini yo['ʻ‘’`]?qotgan|утратил\w* силу", "normativ-huquqiy hujjatning amal qilishini tugatish kuchini yoʻqotgan deb topish прекращение действия нормативно-правового акта"),
+    (r"\blokalizatsiya\w*|\bлокализаци\w*", "shaxsga doir maʼlumotlarni Oʻzbekiston Respublikasi hududidagi texnik vositalarda toʻplash tizimlashtirish saqlash"),
     (r"\boav\b|\bомм\b", "ommaviy axborot vositalari"), (r"\bсми\b", "средства массовой информации"),
     (r"\bdxsh\b", "davlat-xususiy sheriklik"), (r"\bгчп\b", "государственно-частное партнерство"),
     (r"\bворовств\w*|\bукра(л|ли|ла|сть|ден|дут)\w*|\bкраж\w*", "кража"),
@@ -303,6 +306,18 @@ def expand(q):
     return (q + " " + " ".join(dict.fromkeys(add))) if add else q
 
 
+def new_edition(r):
+    """lex.uz хранит новую редакцию закона как «“X”gi Qonuniga oʻzgartish… kiritish haqida» с полным текстом
+    (напр. OʻRQ-445 «Murojaatlar toʻgʻrisida», OʻRQ-78 «OAV toʻgʻrisida»). Это основной текст, а не поправка."""
+    t = r["doc_title"] or ""
+    n = r["n_articles"] if "n_articles" in r.keys() else 0
+    if not r["active"] or (n or 0) < 15:
+        return False
+    tl = t.lower()
+    return (t[:1] in "“«\"" and "ayrim" not in tl) or (tl.startswith("о внесении") and t.count("«") == 1
+                                                         and "некоторые" not in tl)
+
+
 SECTION_BOOST = 0.08
 W_COV, W_HP, W_RS = 0.35, 0.25, 0.4   # вес: покрытие слов вопроса, точность заголовка, балл BM25
 
@@ -342,7 +357,7 @@ def retrieve(question, lang, rewritten, k, as_of=None, orig_rows=None):
         hp = max(_head_precision(r, t_new), _head_precision(r, t_orig))
         sc = W_COV * cov + W_HP * hp + W_RS * rs
         sc *= _special_penalty(r, question, rewritten)
-        if r["amending"]:          # акты «о внесении изменений» — не основной текст нормы
+        if r["amending"] and not new_edition(r):   # акты «о внесении изменений» — не основной текст нормы
             sc *= 0.6
         if r["key"] in hinted:
             sc += CODE_BOOST
@@ -372,6 +387,8 @@ Answer ONLY from the numbered contexts (articles and document cards from lex.uz)
   in force?"): use the HUJJAT KARTASI / КАРТОЧКА ДОКУМЕНТА context. State the full official title, the type, the number
   (e.g. OʻRQ-682) and the adoption date, and the status: in force, or lost force — then name the document now in force
   if it is in the contexts. Add one sentence on what the document regulates, from its first article.
+  The answer MUST contain the number and the adoption date from the card. If a card is marked AMALDAGI / ДЕЙСТВУЮЩИЙ,
+  describe that document as the law in force and mention the older one only as replaced.
 - ANSWER WHENEVER THE CONTEXTS HELP. If the contexts answer the question fully or partly, answer with what they say
   (definitions, main rule, key numbers, exceptions) and, if something is missing, add one short sentence on what the
   found sources do not cover. Do not refuse just because the wording differs or the answer is incomplete.

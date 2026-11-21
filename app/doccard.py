@@ -22,17 +22,21 @@ _KIND = [
 ]
 _QUOTED = re.compile(r"[«\"“„]([^»\"”“]{4,160})[»\"”“]")
 # «… kodeksi», «… qonuni/qonunlari», «… strategiyasi» без кавычек
-_NAMED = re.compile(r"([\w'ʻʼ‘’`\- –—]{3,80}?)\s+(kodeksi|qonuni|qonunlari|strategiyasi|кодекс\w*|закон\w*|стратеги\w*)\b",
-                    re.I)
+_NAMED = re.compile(r"([\w'ʻʼ‘’`\- –—]{3,80}?)\s+(kodeksi|qonuni|qonunlari|strategiyasi|кодекс\w*|закон\w*|стратеги\w*)\b"
+                    r"|([\w'ʻʼ‘’`\- –—]{3,80}?\s+to['ʻ‘’`]?g['ʻ‘’`]?risidagi)\s+(?:amaldagi\s+|yangi\s+)?qonun", re.I)
 _ARTICLE_NO = re.compile(r"\d+\s*-?\s*(modda|moddasi|статья|статьи|статье|модда)", re.I)
 _DOC_WORDS = set("togrisida togrisidagi toʻgʻrisida haqida qonun qonuni qonunlari kodeks kodeksi strategiya strategiyasi "
                  "farmon qaror ozbekiston respublikasi respublikasining amaldagi amaldami hozir yangi eski asosiy "
                  "закон кодекс республики узбекистан о об стратегия".split())
 _LABELS = {
     "uz": ("HUJJAT KARTASI (lex.uz maʼlumotlari)", "Hujjat", "Turi", "Raqami", "Qabul qilingan sana",
-           "Kuchga kirgan sana", "Holati", "amalda", "kuchini yoʻqotgan", "Havola", "Hujjatning birinchi moddasi"),
+           "Kuchga kirgan sana", "Holati", "amalda", "kuchini yoʻqotgan", "Havola", "Hujjatning birinchi moddasi",
+           "AMALDAGI HUJJAT", "ESKI HUJJAT (kuchini yoʻqotgan)",
+           "Izoh: lex.uz da qonunning amaldagi yangi tahriri shu hujjat sifatida joylashtirilgan"),
     "ru": ("КАРТОЧКА ДОКУМЕНТА (данные lex.uz)", "Документ", "Вид", "Номер", "Дата принятия",
-           "Дата вступления в силу", "Статус", "действует", "утратил силу", "Ссылка", "Первая статья документа"),
+           "Дата вступления в силу", "Статус", "действует", "утратил силу", "Ссылка", "Первая статья документа",
+           "ДЕЙСТВУЮЩИЙ ДОКУМЕНТ", "СТАРЫЙ ДОКУМЕНТ (утратил силу)",
+           "Примечание: на lex.uz действующая новая редакция закона размещена как этот документ"),
 }
 _FORM_NAME = {"uz": {"Закон": "Qonun", "Кодекс": "Kodeks", "Конституция": "Konstitutsiya", "Указ": "Prezident farmoni",
                      "Постановление": "Qaror"},
@@ -91,7 +95,7 @@ def _find(name, lang, forms, year=None, limit=30, quoted=False, strategy=False):
     fq = " AND ".join(f'"{t}"*' for t in dict.fromkeys(must))
     rows = db.conn().execute(
         "SELECT d.* FROM doc_fts f JOIN docs d ON f.rowid = d.key*2 + (CASE d.lang WHEN 'ru' THEN 0 ELSE 1 END) "
-        "WHERE doc_fts MATCH ? AND d.lang=? ORDER BY d.amending, d.active DESC, length(d.title) LIMIT 400",
+        "WHERE doc_fts MATCH ? AND d.lang=? ORDER BY d.amending, d.active DESC, length(d.title) LIMIT 3000",
         (fq, lang)).fetchall()
     nn = norm(_canon(name)).replace("ozbekiston respublikasining ", "")
     tset = set(ts)
@@ -105,8 +109,10 @@ def _find(name, lang, forms, year=None, limit=30, quoted=False, strategy=False):
             0 if (year and str(d["year"]) == str(year)) else 1,
             0 if not forms or d["form"] in forms else 1,
             1 if (d["amending"] or _AMEND_T.search(norm(d["title"]))) else 0,   # «о внесении изменений»
-            1 if d["title"][:1] in "“«\"" else 0,           # «“…”gi Qonuniga …» — документ о другом документе
+            1 if re.match(r"^[“«\"][^”»\"]+[”»\"]\s?gi\b", d["title"]) else 0,   # «“X”gi Qonuniga …» — о другом документе
             0 if _core(d["title"]) == _core(nn) else 1,    # название совпало целиком
+            0 if (quoted and _core(nn) in _core(d["title"])) else 1,   # «…» из вопроса есть в названии
+            extra if quoted else 0,                          # для «…»: самое близкое название
             0 if d["active"] else 1,
             0 if (nn and nn in t) else 1,
             extra,                                           # лишние слова в названии
@@ -162,12 +168,12 @@ def doc_question(question):
     else:
         m = _NAMED.search(q)
         if m:
-            name = m.group(0)
+            name = re.sub(r"to['ʻ‘’`]?g['ʻ‘’`]?risidagi$", "toʻgʻrisida", m.group(3)) if m.group(3) else m.group(0)
     if not name:
         return None
     # длинный вопрос с цитатой — это вопрос о норме, а не о документе; карточка всё равно полезна (ст. 1),
     # но её не ставим, если в названии нет значимых слов
-    if not _name_terms(name) and not re.search(r"kodeks|кодекс|konstitu|конститу", norm(name)):
+    if not _name_terms(name, keep_digits=bool(_QUOTED.search(q))) and not re.search(r"kodeks|кодекс|konstitu|конститу", norm(name)):
         return None
     if m.re is _QUOTED and not (re.search(r"to['ʻ‘’`]?g['ʻ‘’`]?risida|haqida|^о |^об ", norm(name) + " " + name.lower())
                                 or _kinds(q.replace(name, ""))):
@@ -214,6 +220,9 @@ def card_rows(question, lang):
             out = [best, nxt]
     rows = []
     L = _LABELS[lang]
+    multi = len(out) > 1
+    if multi:   # действующий документ — первым
+        out = sorted(out, key=lambda d: 0 if d["active"] else 1)
     for d in out:
         a = _first_article(d["key"], lang)
         if a is None:
@@ -221,10 +230,13 @@ def card_rows(question, lang):
         status = L[7] if d["active"] else L[8]
         if d["status_warning"]:
             status += f" ({d['status_warning']})"
-        lines = [L[0], f"{L[1]}: {d['title']}", f"{L[2]}: {_FORM_NAME[lang].get(d['form'], d['form'])}",
+        head = L[0] + ((" — " + (L[11] if d["active"] else L[12])) if multi else "")
+        lines = [head, f"{L[1]}: {d['title']}", f"{L[2]}: {_FORM_NAME[lang].get(d['form'], d['form'])}",
                  f"{L[3]}: {(d['number'] or '').replace('-сон', '')}", f"{L[4]}: {d['date']}",
                  f"{L[5]}: {d['effective_date'] or d['date']}", f"{L[6]}: {status}", f"{L[9]}: {d['src_url']}",
                  f"{L[10]}:"]
+        if d["active"] and d["amending"] and d["title"][:1] in "“«\"" or (d["active"] and d["amending"] and lang == "ru"):
+            lines.insert(-1, L[13])
         r = dict(a)
         r["text"] = "\n".join(lines) + "\n" + (a["text"] or "")
         r["doc_card"] = True
