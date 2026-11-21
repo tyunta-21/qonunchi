@@ -15,7 +15,7 @@ from . import db, doccard, llm
 from .textnorm import norm, terms
 from .translit import detect, cyr_to_lat, db_lang
 
-PIPELINE_VERSION = "0.4.1"
+PIPELINE_VERSION = "0.4.2"
 SYNC_TIMEOUT = float(os.environ.get("RAG_SYNC_TIMEOUT", "110"))
 ITEM_TIMEOUT = float(os.environ.get("RAG_ITEM_TIMEOUT", "60"))
 WORKERS = int(os.environ.get("RAG_WORKERS", "10"))
@@ -387,11 +387,15 @@ Answer ONLY from the numbered contexts (articles and document cards from lex.uz)
   in force?"): use the HUJJAT KARTASI / КАРТОЧКА ДОКУМЕНТА context. State the full official title, the type, the number
   (e.g. OʻRQ-682) and the adoption date, and the status: in force, or lost force — then name the document now in force
   if it is in the contexts. Add one sentence on what the document regulates, from its first article.
-  The answer MUST contain the number and the adoption date from the card. If a card is marked AMALDAGI / ДЕЙСТВУЮЩИЙ,
-  describe that document as the law in force and mention the older one only as replaced.
+  The answer MUST contain the number and the adoption date from the card, and the FIRST sentence must follow this
+  pattern: "<title from the card> — <type>, <number>, <adoption date> yilda qabul qilingan, <status>." (in Russian:
+  "<title> — <type>, № <number>, принят <date>, <status>."). Never drop the number, also for decrees and strategies
+  (PF-..., PQ-...). If the number field is empty, say the date and type only. If a card is marked AMALDAGI /
+  ДЕЙСТВУЮЩИЙ, describe that document as the law in force and mention the older one only as replaced.
 - ANSWER WHENEVER THE CONTEXTS HELP. If the contexts answer the question fully or partly, answer with what they say
   (definitions, main rule, key numbers, exceptions) and, if something is missing, add one short sentence on what the
-  found sources do not cover. Do not refuse just because the wording differs or the answer is incomplete.
+  found sources do not cover. Do not refuse just because the wording differs or the answer is incomplete:
+  if the exact term or number is not stated, describe the procedure or rule that the contexts do give.
 - Set "no_answer": true ONLY if (a) no context is relevant to the question, or (b) the question asks about a document
   or article that is not in the contexts and may not exist (e.g. a law of a future year, "article 500"), or
   (c) the question is about another country's law or not about law, or (d) it asks how to break or evade the law.

@@ -190,6 +190,22 @@ def _first_article(key, lang):
         "WHERE a.key=? AND a.lang=? ORDER BY a.pos LIMIT 1", (key, lang)).fetchone()
 
 
+def _code_law_number(d, lang):
+    """У кодекса на lex.uz номера нет: берём номер закона «… kodeksini tasdiqlash …» с той же датой и тем же названием."""
+    m = re.search(r"(\w+)\s+(?:kodeks|кодекс)", d["title"], re.I) or re.search(r"(?:kodeks|кодекс)\w*\s+(\w+)", d["title"], re.I)
+    if not m:
+        return ""
+    stem = norm(m.group(1))[:4]
+    for num, title in db.conn().execute(
+            "SELECT number, title FROM docs WHERE date=? AND number<>'' AND "
+            "(title LIKE '%kodeksini tasdiqlash%' OR title LIKE '%кодекс%утвержд%' OR title LIKE '%утвержд%кодекс%')",
+            (d["date"],)):
+        t = norm(title)
+        if re.search(r"\b" + re.escape(stem) + r"\w*\s+(?:kodeks|кодекс)", t):
+            return (num or "").replace("-сон", "")
+    return ""
+
+
 def card_rows(question, lang):
     """Строки-«карточки» (dict, как строка статьи) для вопроса о документе. Пусто, если вопрос не о документе."""
     dq = doc_question(question)
@@ -227,15 +243,25 @@ def card_rows(question, lang):
         a = _first_article(d["key"], lang)
         if a is None:
             continue
+        number = (d["number"] or "").replace("-сон", "")
+        if not number and d["form"] == "Кодекс":
+            number = _code_law_number(d, lang)
+        title = d["title"]
+        new_ed = d["active"] and d["amending"] and (title[:1] in "“«\"" or lang == "ru")
+        if new_ed:
+            m = re.match(r"^[“«\"]([^”»\"]+)[”»\"]", title)
+            if m:
+                title = (f"«{m.group(1)}» (новая редакция)" if lang == "ru"
+                         else f"“{m.group(1)}”gi Qonun (yangi tahrir)")
         status = L[7] if d["active"] else L[8]
         if d["status_warning"]:
             status += f" ({d['status_warning']})"
         head = L[0] + ((" — " + (L[11] if d["active"] else L[12])) if multi else "")
-        lines = [head, f"{L[1]}: {d['title']}", f"{L[2]}: {_FORM_NAME[lang].get(d['form'], d['form'])}",
-                 f"{L[3]}: {(d['number'] or '').replace('-сон', '')}", f"{L[4]}: {d['date']}",
+        lines = [head, f"{L[1]}: {title}", f"{L[2]}: {_FORM_NAME[lang].get(d['form'], d['form'])}",
+                 f"{L[3]}: {number}", f"{L[4]}: {d['date']}",
                  f"{L[5]}: {d['effective_date'] or d['date']}", f"{L[6]}: {status}", f"{L[9]}: {d['src_url']}",
                  f"{L[10]}:"]
-        if d["active"] and d["amending"] and d["title"][:1] in "“«\"" or (d["active"] and d["amending"] and lang == "ru"):
+        if new_ed:
             lines.insert(-1, L[13])
         r = dict(a)
         r["text"] = "\n".join(lines) + "\n" + (a["text"] or "")
