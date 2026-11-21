@@ -20,6 +20,11 @@ def _load_env():
 
 
 _load_env()
+# QONUNCHI_X=... (например в .env внутри контейнера) заменяет X из окружения docker:
+# QONUNCHI_OPENAI_API_KEY, QONUNCHI_OPENAI_BASE_URL (Gemini/DeepSeek через OpenAI-совместимый API), QONUNCHI_OPENAI_KW_MODEL
+for _k, _v in list(os.environ.items()):
+    if _k.startswith("QONUNCHI_") and _v:
+        os.environ[_k[len("QONUNCHI_"):]] = _v
 
 PROVIDER = os.environ.get("AI_PROVIDER", "").strip().lower()
 if not PROVIDER:
