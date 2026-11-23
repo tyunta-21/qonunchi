@@ -1,0 +1,90 @@
+id,question,gold,overview
+1,Konstitutsiyaning yangi tahriri qachon qabul qilingan va kuchga kirgan?,lex:6804077#1-modda;lex:6804077#17-modda,1
+2,Davlat tili qaysi?,lex:6445145#4-modda;lex:121051#1-modda,0
+3,Prezident necha yilga saylanadi va ketma-ket necha muddat?,lex:6445145#106-modda,0
+4,Oliy Majlis qanday tuzilgan?,lex:6445145#91-modda;lex:6445145#92-modda,0
+5,O'zbekiston Konstitutsiyaga ko'ra qanday davlat?,lex:6445145#1-modda,0
+6,Qaysi hujjat eng yuqori yuridik kuchga ega?,lex:6445145#15-modda;lex:5378966#8-modda,0
+7,Qoraqalpog'iston Respublikasining maqomi?,lex:6445145#85-modda;lex:6445145#86-modda;lex:6445145#87-modda;lex:6445145#88-modda;lex:6445145#89-modda,0
+8,Hokimiyat bo'linishi prinsipi nimani anglatadi?,lex:6445145#11-modda,0
+9,Qonunning orqaga qaytish kuchi bormi?,lex:5378966#41-modda,0
+10,Mulk Konstitutsiyada qanday himoyalanadi?,lex:6445145#65-modda,0
+11,Hokim kim?,lex:6445145#121-modda;lex:6445145#124-modda;lex:112170#21-modda,0
+12,Viloyat hokimi qanday tayinlanadi?,lex:6445145#124-modda;lex:112170#2-modda,0
+13,Tuman/shahar hokimi qanday tayinlanadi?,lex:6445145#124-modda;lex:112170#2-modda,0
+14,Mahalliy Kengash deputatlari necha yilga saylanadi?,lex:4386848#88-modda;lex:6445145#120-modda,0
+15,Mahalliy byudjetni kim tasdiqlaydi?,lex:2304138#27-modda;lex:2304138#99-modda,0
+16,Hokim qanday hujjat chiqaradi?,lex:112170#6-modda,0
+17,Mahalla (fuqarolar yig'ini) nima?,lex:6445145#127-modda;lex:2156899#1-modda;lex:2156899#2-modda,0
+18,Fuqarolar yig'ini raisining vakolat muddati?,lex:3988421#8-modda;lex:3988421#28-modda,0
+19,"Hokim qarori normativ bo'lsa, ro'yxatdan o'tishi kerakmi?",lex:112170#6-modda,0
+20,Yuqori hokim quyi hokim qarorini bekor qila oladimi?,lex:112170#21^1-modda;lex:112170#26-modda,0
+21,«Normativ-huquqiy hujjatlar to'g'risida»gi Qonun?,lex:5378966#1-modda,1
+22,Hujjatlar ierarxiyasi (yuqoridan pastga)?,lex:5378966#6-modda,0
+24,Fuqaro murojaatini ko'rib chiqish muddati?,lex:3336169#28-modda,0
+25,«Jismoniy va yuridik shaxslarning murojaatlari to'g'risida»gi Qonun?,lex:3336169#1-modda,1
+26,«Ma'muriy tartib-taomillar to'g'risida»gi Qonun nima uchun?,lex:3492199#1-modda,0
+27,«Elektron hukumat to'g'risida»gi Qonun?,lex:2833860#1-modda;lex:2833860#3-modda,1
+28,Ma'muriy qarorga qayerga shikoyat qilinadi?,lex:97664#315-modda;lex:3492199#69-modda,0
+29,"lex.uz da ""kuchini yo'qotgan"" hujjat nimani bildiradi?",lex:5378966#45-modda,0
+30,Normativ hujjat loyihalari qayerda muhokama qilinadi?,lex:5378966#24-modda,0
+31,Rasmiy statistikani kim yuritadi?,lex:5569619#9-modda;lex:5569619#12-modda,0
+32,«Axborot erkinligi prinsiplari va kafolatlari to'g'risida»gi Qonun?,lex:52268#1-modda,1
+33,«Axborotlashtirish to'g'risida»gi Qonun?,lex:83472#1-modda,1
+34,«Davlat hokimiyati va boshqaruvi organlari faoliyatining ochiqligi to'g'risida»gi Qonun?,lex:2381133#1-modda,1
+35,Ochiq ma'lumotlar qayerda e'lon qilinadi?,lex:2381133#11-modda;lex:2381133#12-modda,0
+36,Davlat sirlariga oid ma'lumotni ochish mumkinmi?,lex:7282637#22-modda;lex:111453#162-modda,0
+37,Statistik ma'lumotlarda respondent maxfiyligi?,lex:5569619#28-modda,0
+38,«OAV to'g'risida»gi Qonun?,lex:1106870#1-modda,1
+39,Axborot so'roviga javob muddati?,lex:1319#6-modda;lex:52268#9-modda,0
+40,Mualliflik huquqi qonuni?,lex:1022944#1-modda;lex:1022944#5-modda,1
+41,«Shaxsga doir ma'lumotlar to'g'risida»gi Qonun?,lex:4396419#1-modda,1
+42,Shaxsga doir ma'lumotni qayta ishlash asosi?,lex:4396419#18-modda,0
+44,Operator/mulkdor reyestri?,lex:4396419#20-modda;lex:4396419#31-modda,0
+45,«Kiberxavfsizlik to'g'risida»gi Qonun?,lex:5960604#1-modda,1
+48,Elektron raqamli imzo qonuni?,lex:6234904#1-modda;lex:6234904#2-modda,1
+49,AI javobi rasmiy huquqiy xulosa kuchiga egami?,lex:83472#7^1-modda,0
+50,Biometrik ma'lumotlar rejimi?,lex:4396419#26-modda;lex:4396419#27^1-modda,0
+51,«Investitsiyalar va investitsiya faoliyati to'g'risida»gi Qonun?,lex:4664142#1-modda,1
+52,«Davlat-xususiy sheriklik to'g'risida»gi Qonun?,lex:4329270#1-modda,1
+53,«Tadbirkorlik faoliyati erkinligining kafolatlari to'g'risida»?,lex:2006789#1-modda,1
+54,Tadbirkorlik sub'ektini ro'yxatdan o'tkazish muddati?,lex:2006789#13-modda,0
+55,Litsenziya talab qilinadigan faoliyatlar?,lex:5511879#13-modda,0
+56,Investorga kafolatlar?,lex:4664142#19-modda;lex:4664142#15-modda;lex:4664142#21-modda,0
+57,Aksiyadorlik jamiyatlari qonuni?,lex:2382409#1-modda;lex:111189#64-modda,1
+58,Raqobat to'g'risidagi amaldagi qonun?,lex:6518381#1-modda,1
+59,DXSH loyihasida davlat nima beradi?,lex:4329270#14-modda;lex:4329270#3-modda,0
+60,Hokim investor uchun yer ajratishi mumkinmi?,lex:152653#24-modda;lex:112170#10-modda,0
+61,Soliq kodeksi?,lex:4674902#1-modda,1
+62,QQS stavkasi qancha?,lex:4674902#258-modda,0
+63,Byudjet kodeksi?,lex:2304138#1-modda,1
+64,«Davlat xaridlari to'g'risida»gi Qonun?,lex:5382974#1-modda,1
+65,Mahalliy byudjetga qaysi soliqlar tushadi?,lex:2304138#52-modda,0
+67,Yer va mol-mulk solig'ini kim to'laydi?,lex:4674902#418-modda;lex:4674902#433-modda,0
+68,Davlat xaridida g'olib qanday aniqlanadi?,lex:5382974#62-modda,0
+69,Xarid qaysi platformada o'tkaziladi?,lex:5382974#27-modda;lex:5382974#4-modda,0
+70,Erkin iqtisodiy zona soliq imtiyozlari?,lex:4674902#473-modda;lex:4737511#39-modda,0
+71,Mehnat kodeksi?,lex:6257288#1-modda,1
+72,Haftalik ish vaqti?,lex:6257288#182-modda,0
+73,Sinov muddati?,lex:6257288#130-modda,0
+74,Yillik asosiy mehnat ta'tili?,lex:6257288#217-modda,0
+75,Ishdan bo'shatishda ogohlantirish muddati?,lex:6257288#165-modda,0
+76,«Aholi bandligi to'g'risida»gi Qonun?,lex:5055690#1-modda,1
+77,Ishsiz maqomi kimga beriladi?,lex:5055690#44-modda,0
+78,Ijtimoiy himoyaning yagona reyestri?,lex:8346774#13-modda,0
+79,Pensiya yoshi?,lex:112314#7-modda,0
+80,Nogironlar huquqlari qonuni?,lex:5049511#1-modda,1
+81,Yer kodeksi?,lex:152653#1-modda,1
+82,Yer xususiy mulkmi?,lex:152653#17-modda;lex:152653#18-modda;lex:6445145#68-modda,0
+83,Qishloq xo'jalik yerini boshqa maqsadga o'tkazish?,lex:152653#9-modda,0
+84,Shaharsozlik kodeksi?,lex:5307951#1-modda,1
+85,Suv va suvdan foydalanish qonuni?,lex:7655343#1-modda,1
+86,«Tabiatni muhofaza qilish to'g'risida»gi Qonun?,lex:107115#1-modda,1
+87,Ekologik ekspertiza qachon kerak?,lex:7397280#11-modda,0
+88,«Chiqindilar to'g'risida»gi Qonun?,lex:42423#1-modda,1
+89,Fermer va dehqon xo'jaligi qonunlari?,lex:275195#1-modda;lex:5351631#1-modda,1
+90,Madaniy meros obyektlari qonuni (Buxoro tarixiy markazi uchun)?,lex:25461#1-modda,1
+93,«Korrupsiyaga qarshi kurashish to'g'risida»gi Qonun?,lex:3088008#1-modda,1
+94,«Davlat fuqarolik xizmati to'g'risida»gi Qonun?,lex:6145972#1-modda,1
+97,1995-yilgi Mehnat kodeksi hozir amaldami?,lex:6257345#2-modda,0
+100,Buxoro viloyati hokimi investitsiya jalb qilishda qanday qonuniy vositalardan foydalana oladi?,lex:4664142#27-modda,0

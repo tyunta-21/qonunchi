@@ -15,7 +15,7 @@ from . import db, llm
 from .textnorm import norm, terms
 from .translit import detect, cyr_to_lat, db_lang
 
-PIPELINE_VERSION = "0.3.1"
+PIPELINE_VERSION = "0.3.2"
 SYNC_TIMEOUT = float(os.environ.get("RAG_SYNC_TIMEOUT", "110"))
 ITEM_TIMEOUT = float(os.environ.get("RAG_ITEM_TIMEOUT", "60"))
 WORKERS = int(os.environ.get("RAG_WORKERS", "10"))
@@ -234,7 +234,7 @@ EXPAND = [
     (r"\bjazo turlari\b|\bjazo(ning)? turlari\b|\bвид\w* наказани\w*", "jazo tizimi asosiy jazolar"),
     # разговорные слова -> термины кодексов (oʻzbek)
     (r"\bo['ʻ‘’`]?z hisobim\w*|\bза свой сч[её]т|\bбез сохранения", "ish haqi saqlanmaydigan taʼtil отпуск без сохранения заработной платы"),
-    (r"\bo['ʻ‘’`]?zimni himoya\w*|\bhimoyalan\w*|\bсамооборон\w*|\bзащищая себя", "zaruriy mudofaa необходимая оборона"),
+    (r"\bo['ʻ‘’`]?zimni himoya\w*|\bhimoyalan(sam|sa|ib)\b|\bсамооборон\w*|\bзащищая себя", "zaruriy mudofaa необходимая оборона"),
     (r"\bbola\w* (bilan )?(ko['ʻ‘’`]?rish|uchrash)\w*|\bвидеться с ребенк\w*|\bобщени\w* с ребенк\w*", "boladan alohida yashayotgan otaning ota-onalik huquqi родитель проживающий отдельно от ребенка"),
     (r"\bvasiyat\w*.*(qoldirmad|chetlat|bermad)|\bобязательн\w* дол\w*", "merosdan majburiy ulush обязательная доля в наследстве"),
     (r"\btunda\b|\btungi\b|\bночью\b|\bночн\w*", "tungi vaqtdagi mehnat ночное время"),
@@ -258,7 +258,11 @@ EXPAND = [
 # Явное упоминание кодекса в вопросе («Jinoyat kodeksiga koʻra…», «по Трудовому кодексу», «QQS») —
 # ищем и внутри этого кодекса, и поднимаем его статьи. Шаблон по norm(вопроса) -> часть norm(названия).
 CODE_HINTS = [
-    (r"konstitutsiya|конституц", "konstitutsiya"), (r"mehnat kodeks|трудов\w* кодекс", "mehnat kodeksi"),
+    (r"konstitutsiya|конституц", "konstitutsiya"),
+    # вопросы о государственном устройстве — это Конституция, даже если она не названа
+    (r"\bprezident\w*|oliy majlis|\bsenat\w*|qonunchilik palatas|qoraqalpogiston respublikas|davlat til|"
+     r"hokimiyat\w* bolin|президент|олий мажлис|сенат\w*|законодательн\w* палат|разделени\w* власт|государственн\w* язык",
+     "konstitutsiya"), (r"mehnat kodeks|трудов\w* кодекс", "mehnat kodeksi"),
     (r"fuqarolik kodeks|гражданск\w* кодекс", "fuqarolik kodeksi"), (r"oila kodeks|семейн\w* кодекс", "oila kodeksi"),
     (r"jinoyat kodeks|уголовн(ый|ого|ом|ому) кодекс", "jinoyat kodeksi"),
     (r"jinoyat.protsessual|уголовно.процессуальн", "jinoyat-protsessual"),
@@ -285,6 +289,84 @@ def code_keys(question):
     return {k for k, t in _code_keys.items() for f in frags if f in t}
 
 
+# ---------------------------------------------------------------- документ, названный в вопросе
+# «Davlat xaridlari toʻgʻrisida»gi Qonun?, «Byudjet kodeksi?», «OAV toʻgʻrisidagi qonun» — ищем сам документ по названию,
+# поднимаем его статьи, а на вопрос-обзор («...gi Qonun?») добавляем его первые статьи (maqsad, qonunchilik, tushunchalar).
+ABBR = [(r"\boav\b", "ommaviy axborot vositalari"), (r"\bдхш\b|\bdxsh\b", "davlat-xususiy sheriklik"),
+        (r"\bbyudjet", "budjet"), (r"\bбюджет", "бюджет"), (r"\bsmi\b|\bсми\b", "средства массовой информации")]
+_NAME_STOP = {"qonun", "qonuni", "qonunlari", "qonunning", "kodeks", "kodeksi", "kodeksiga", "togrisida", "togrisidagi",
+              "togrisidagi", "amaldagi", "закон", "закона", "кодекс", "кодекса", "о", "об", "оʻzbekiston", "ozbekiston",
+              "respublikasi", "respublikasining", "uchun", "nima", "nimani", "deydi", "haqida", "va"}
+_titles = {}
+INTRO_ARTICLES = 3
+
+
+def _abbr(q):
+    low = norm(q)
+    for pat, rep in ABBR:
+        low = re.sub(pat, rep, low)
+    return low
+
+
+def _name_terms(text):
+    return [w for w in re.findall(r"\w+", _abbr(text)) if w not in _NAME_STOP and len(w) > 1]
+
+
+def _doc_titles(lang):
+    if lang not in _titles:
+        _titles[lang] = [(r["key"], norm(r["title"]), r["form"], r["amending"])
+                         for r in db.conn().execute("SELECT key, title, form, amending FROM docs WHERE lang=? AND active=1",
+                                                    (lang,))]
+    return _titles[lang]
+
+
+def named_docs(question, lang):
+    """Номера действующих документов, названных в вопросе: название в кавычках «...» или «<слова> kodeksi/qonuni»."""
+    qn = _abbr(question)
+    names = re.findall(r"[«\"“„]([^»\"”“]{4,160})[»\"”“]", question)
+    names += [m.group(1) for m in re.finditer(r"([\w\- ]{3,80}?)\s+(kodeksi|kodeks|qonuni|qonun|кодекс\w*)\b", qn)]
+    found = []
+    for name in names:
+        ts = [t[: max(4, len(t) - 2)] for t in _name_terms(name)]
+        if not ts:
+            continue
+        best = []
+        for key, title, form, amending in _doc_titles(lang):
+            tt = re.sub(r"[^\w ]", " ", title)
+            if all(t in tt for t in ts):
+                extra = len(_name_terms(title)) - len(ts)        # меньше лишних слов в названии = точнее
+                best.append((amending or 0, form not in ("Кодекс", "Конституция") and "kodeks" in qn, extra, key))
+        best.sort()
+        found += [b[3] for b in best[:2]]
+    return list(dict.fromkeys(found))
+
+
+def is_overview(question, keys, lang):
+    """Вопрос только о самом документе («...gi Qonun?», «Soliq kodeksi?»): кроме названия, почти нет слов."""
+    if not keys:
+        return False
+    q = re.sub(r"[«\"“„][^»\"”“]*[»\"”“]", " ", question)
+    q = re.sub(r"[\w\- ]{3,80}?\s+(kodeksi|kodeks|qonuni|qonun)\b", " ", _abbr(q))
+    rest = [w for w in terms(q) if w not in ("gi", "qonu", "qonun", "kodek", "amald", "nima", "deyd", "strat")]
+    return len(rest) <= 1
+
+
+# Конституция: короткие вопросы о государственном устройстве («Prezident necha yilga saylanadi?») часто не называют её,
+# а общий поиск тонет в статьях других законов. Поэтому статьи Конституции всегда ищутся отдельно и попадают в кандидаты.
+CONST_LIMIT = 6
+CONST_WEIGHT = 0.9     # балл поиска внутри Конституции относительно её лучшей статьи
+INTRO_BOOST = 0.5      # первые статьи документа на вопрос-обзор
+_const_key = {}
+
+
+def constitution_key(lang):
+    if lang not in _const_key:
+        r = db.conn().execute("SELECT key FROM docs WHERE lang=? AND active=1 AND form='Конституция' "
+                              "ORDER BY substr(date,7,4) DESC LIMIT 1", (lang,)).fetchone()
+        _const_key[lang] = r["key"] if r else None
+    return _const_key[lang]
+
+
 # Частые ошибки написания: заменяем, а не дописываем («oʻgʻirlik» иначе совпадает с «ogʻir» = тяжкий).
 TYPOS = [(r"\bo['ʻ‘’`]?g['ʻ‘’`]?irlik", "oʻgʻrilik")]
 
@@ -306,6 +388,24 @@ W_COV, W_HP, W_RS = 0.35, 0.25, 0.4   # вес: покрытие слов воп
 def retrieve(question, lang, rewritten, k, as_of=None, orig_rows=None):
     cands = {}
     hinted = code_keys(question)
+    named = named_docs(question, lang)
+    hinted |= set(named)
+    intro = {}
+    if is_overview(question, named, lang):      # «...gi Qonun?» — первые статьи документа (maqsad, qonunchilik)
+        for key in named[:1]:
+            arts = [a for a in db.articles(key, lang) if a["article"]]
+            arts.sort(key=lambda a: int(re.match(r"\d+", a["article"]).group()) if re.match(r"\d+", a["article"]) else 9999)
+            first = [a["id"] for a in arts[:INTRO_ARTICLES]]
+            for i, r in enumerate(db.articles_by_ids(first)):
+                cands[r["id"]] = (r, 1.0)
+                intro[r["id"]] = INTRO_BOOST - 0.05 * first.index(r["id"])
+    ck = constitution_key(lang)
+    if ck and ck not in hinted:
+        rows = db.search_articles(rewritten or question, lang, limit=CONST_LIMIT, active_only=True, key=ck, count=False)[0]
+        if rows:
+            best = -rows[0]["score"] or 1.0
+            for r in rows:
+                cands.setdefault(r["id"], (r, round(min(1.0, CONST_WEIGHT * max(0.0, -r["score"]) / best), 4)))
     ts_all = list(dict.fromkeys(terms(rewritten or "") + terms(question)))
     for r in chapter_candidates(ts_all, lang):
         cands.setdefault(r["id"], (r, 0.5))
@@ -338,12 +438,13 @@ def retrieve(question, lang, rewritten, k, as_of=None, orig_rows=None):
         hp = max(_head_precision(r, t_new), _head_precision(r, t_orig))
         sc = W_COV * cov + W_HP * hp + W_RS * rs
         sc *= _special_penalty(r, question, rewritten)
-        if r["amending"]:          # акты «о внесении изменений» — не основной текст нормы
+        if r["amending"] and r["key"] not in named:   # акты «о внесении изменений» — не основной текст нормы
             sc *= 0.6
         if r["key"] in hinted:
             sc += CODE_BOOST
         if topics and "chapter" in r.keys() and any(t in norm(r["chapter"] or "") for t in topics):
             sc += SECTION_BOOST   # раздел кодекса совпадает с темой (напр. «Qoʻshilgan qiymat soligʻi»)
+        sc += intro.get(r["id"], 0.0)
         if r["form"] in ("Кодекс", "Конституция"):
             sc += 0.05
         elif r["form"] == "Закон":
