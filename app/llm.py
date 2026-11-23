@@ -1,8 +1,8 @@
 """ИИ-помощник: отвечает только по найденным статьям и ссылается на них.
 
 Провайдер выбирается переменной окружения AI_PROVIDER:
-  openai — OpenAI GPT      (ключ в OPENAI_API_KEY) — основной вариант
-  claude — Anthropic Claude (ключ в ANTHROPIC_API_KEY)
+  claude — Anthropic Claude (ключ в ANTHROPIC_API_KEY) — основной вариант, по умолчанию Haiku 5.5
+  openai — OpenAI GPT      (ключ в OPENAI_API_KEY)
   mock   — тестовый режим без ключа (включается сам, если ключа нет)
 """
 import os, re
@@ -23,10 +23,11 @@ _load_env()
 
 PROVIDER = os.environ.get("AI_PROVIDER", "").strip().lower()
 if not PROVIDER:
-    PROVIDER = "openai" if os.environ.get("OPENAI_API_KEY") else (
-        "claude" if os.environ.get("ANTHROPIC_API_KEY") else "mock")
+    PROVIDER = "claude" if os.environ.get("ANTHROPIC_API_KEY") else (
+        "openai" if os.environ.get("OPENAI_API_KEY") else "mock")
 
-CLAUDE_MODEL = os.environ.get("CLAUDE_MODEL", "claude-opus-5-5")
+# Haiku 5.5 — самая дешёвая модель Claude ($0.10 / $0.50 за 1 млн токенов). Умнее и дороже: claude-sonnet-5-5.
+CLAUDE_MODEL = os.environ.get("CLAUDE_MODEL", "claude-haiku-5-5")
 CLAUDE_EFFORT = os.environ.get("CLAUDE_EFFORT", "low")
 OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "gpt-4.1-mini")
 OPENAI_KW_MODEL = os.environ.get("OPENAI_KW_MODEL", OPENAI_MODEL)
@@ -97,11 +98,14 @@ def _claude(msgs, lang):
     client = anthropic.Anthropic()
     kw = dict(model=CLAUDE_MODEL, max_tokens=4000, system=SYSTEM[lang], messages=msgs,
               output_config={"effort": CLAUDE_EFFORT})
-    try:
-        # при отказе модели API само переспросит запасную модель
-        r = client.beta.messages.create(betas=["server-side-fallback-2026-07-01"], fallbacks="default", **kw)
-    except anthropic.BadRequestError:
-        r = client.messages.create(**kw)
+    if "haiku" in CLAUDE_MODEL:
+        r = client.messages.create(**kw)   # у Haiku нет запасной модели на стороне API
+    else:
+        try:
+            # при отказе модели API само переспросит запасную модель
+            r = client.beta.messages.create(betas=["server-side-fallback-2026-07-01"], fallbacks="default", **kw)
+        except anthropic.BadRequestError:
+            r = client.messages.create(**kw)
     if r.stop_reason == "refusal":
         return ("Не могу ответить на этот вопрос." if lang == "ru" else "Bu savolga javob bera olmayman.")
     return "".join(b.text for b in r.content if b.type == "text").strip()
