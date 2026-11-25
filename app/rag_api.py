@@ -425,7 +425,8 @@ def replaced_by(old_key, lang):
     num = (d["number"] or _approving_number(d) or "").replace("-сон", "").strip()
     if not re.search(r"\d", num):
         return None
-    rows = db.search_articles(f"{num} kuchini yoʻqotgan", lang, limit=30, active_only=True, mode="AND", count=False)[0]
+    words = "утратившими силу" if lang == "ru" else "kuchini yoʻqotgan"
+    rows = db.search_articles(f"{num} {words}", lang, limit=30, active_only=True, mode="AND", count=False)[0]
     name = set(_name_terms(re.sub(r"(ni|ning)?\s+tasdiqlash.*$", "", d["title"])))
     best = []
     for r in rows:
@@ -507,7 +508,8 @@ def retrieve(question, lang, rewritten, k, as_of=None, orig_rows=None):
             for i, r in enumerate(db.articles_by_ids(first)):
                 cands[r["id"]] = (r, 1.0)
                 intro[r["id"]] = INTRO_BOOST - 0.05 * first.index(r["id"])
-    for key in named_inactive(question, lang, named):   # утративший силу закон, названный в вопросе
+    # утративший силу закон, названный в вопросе (не для запроса «на дату»: тогда статус мог быть другим)
+    for key in ([] if as_of else named_inactive(question, lang, named)):
         arts = [a for a in db.articles(key, lang) if a["article"]]
         arts.sort(key=lambda a: int(re.match(r"\d+", a["article"]).group()) if re.match(r"\d+", a["article"]) else 9999)
         first = [a["id"] for a in arts[:2]]
@@ -876,7 +878,7 @@ def answer_item(item, opts):
         else:
             user = f"Contexts:\n\n{_contexts_block(ctxs)}\n\nQuestion: {question}"
             named = named_docs(q_search, lang)
-            old_docs = named_inactive(q_search, lang, named)
+            old_docs = [] if opts.get("as_of_date") else named_inactive(q_search, lang, named)
             if old_docs:
                 d = db.doc(old_docs[0], lang)
                 user += (f"\n\nThe question names a document that is NOT in force: {d['title']} ({_doc_meta(d)}; "
