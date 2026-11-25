@@ -15,7 +15,7 @@ from . import db, semantic, llm
 from .textnorm import norm, terms
 from .translit import detect, cyr_to_lat, db_lang
 
-PIPELINE_VERSION = "0.3.3"
+PIPELINE_VERSION = "0.3.4"
 SYNC_TIMEOUT = float(os.environ.get("RAG_SYNC_TIMEOUT", "110"))
 ITEM_TIMEOUT = float(os.environ.get("RAG_ITEM_TIMEOUT", "60"))
 WORKERS = int(os.environ.get("RAG_WORKERS", "10"))
@@ -314,9 +314,9 @@ def _name_terms(text):
 
 def _doc_titles(lang):
     if lang not in _titles:
-        _titles[lang] = [(r["key"], norm(r["title"]), r["form"], r["amending"])
-                         for r in db.conn().execute("SELECT key, title, form, amending FROM docs WHERE lang=? AND active=1",
-                                                    (lang,))]
+        _titles[lang] = [(r["key"], norm(r["title"]), r["form"], r["amending"], r["n_articles"] or 0)
+                         for r in db.conn().execute("SELECT key, title, form, amending, n_articles FROM docs "
+                                                    "WHERE lang=? AND active=1", (lang,))]
     return _titles[lang]
 
 
@@ -325,19 +325,28 @@ def named_docs(question, lang):
     qn = _abbr(question)
     names = re.findall(r"[«\"“„]([^»\"”“]{4,160})[»\"”“]", question)
     names += [m.group(1) for m in re.finditer(r"([\w\- ]{3,80}?)\s+(kodeksi|kodeks|qonuni|qonun|кодекс\w*)\b", qn)]
+    # Спрашивают «...gi Qonun?» — значит, нужен закон, а не указ или приказ с теми же словами в названии.
+    # Многие законы есть в базе только как «“X toʻgʻrisida”gi Qonuniga oʻzgartish... kiritish haqida»: в таком
+    # акте полный текст закона, поэтому он лучше постановления, где слова названия просто встречаются.
+    want_law = bool(re.search(r"\b(qonun|kodeks|закон|кодекс)|[»\"”]\s*gi\b", qn))
+    lead = re.compile(r"^[\W_]*(ozbekiston respublikasi(ning)? )?[\W_]*")
     found = []
     for name in names:
         ts = [t[: max(4, len(t) - 2)] for t in _name_terms(name)]
         if not ts:
             continue
         best = []
-        for key, title, form, amending in _doc_titles(lang):
+        for key, title, form, amending, n_art in _doc_titles(lang):
             tt = re.sub(r"[^\w ]", " ", title)
             if all(t in tt for t in ts):
                 extra = len(_name_terms(title)) - len(ts)        # меньше лишних слов в названии = точнее
-                best.append((amending or 0, form not in ("Кодекс", "Конституция") and "kodeks" in qn, extra, key))
+                not_law = want_law and form not in ("Закон", "Кодекс", "Конституция")
+                starts = lead.sub("", tt).startswith(ts[0])     # название начинается с названного: это сам закон
+                small = n_art < 5                                # поправка в одну статью или толкование
+                best.append((not_law, not starts, small, amending or 0,
+                             form not in ("Кодекс", "Конституция") and "kodeks" in qn, extra, -n_art, key))
         best.sort()
-        found += [b[3] for b in best[:2]]
+        found += [b[-1] for b in best[:2]]
     return list(dict.fromkeys(found))
 
 
@@ -497,6 +506,12 @@ Answer ONLY from the numbered contexts (articles from lex.uz). Rules:
 - Answer only when a context directly answers THIS question. A context about another body, another category of
   people or another procedure (e.g. notaries instead of Karakalpakstan, pensions instead of citizens' appeals) is not
   an answer: then set "no_answer": true.
+- The law often uses other words than the question: "ketma-ket" = "surunkasiga", "ishdan boʻshatish" = "mehnat
+  shartnomasini bekor qilish", "tuman hokimi" = "tuman va shaharlarning hokimlari". Read every context to the end:
+  the rule is often in a later sentence or a numbered item.
+- If the question has several parts and the contexts answer only some of them, answer those parts with citations
+  and say in one short sentence which part the found sources do not cover. Use "no_answer": true only when no
+  context answers any part of the question.
 - Each context header has the document number, adoption date and status, e.g. "(O‘RQ-682, 20.04.2021, amalda)".
   If the question is about a law or code as a whole («...gi Qonun?», «Soliq kodeksi?»), say its number, adoption
   date and status, then its purpose or subject (usually article 1), with citations. Never answer with the sentence
