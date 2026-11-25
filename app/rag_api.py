@@ -321,6 +321,9 @@ def _doc_titles(lang):
 
 
 _full = {}
+# «“X”gi Oʻzbekiston Respublikasi Qonuniga oʻzgartish… kiritish haqida» — поправка ровно к одному закону
+_ONE_LAW_AMEND = re.compile(r"^\s*[«\"“„][^»\"”]{4,200}[»\"”]\s*gi\s+(Oʻzbekiston Respublikasi\s+)?"
+                            r"(Qonuni|qonuni|Qonun|qonun)ga\s+oʻzgartish\w*\s+va\s+qoʻshimchalar\s+kiritish\s+(haqida|toʻgʻrisida)\s*$")
 FULL_LAW_MIN_ART = 15
 
 
@@ -331,7 +334,7 @@ def full_text_amending(lang):
     if lang not in _full:
         _full[lang] = {r["key"] for r in db.conn().execute(
             "SELECT key, title, n_articles FROM docs WHERE lang=? AND active=1 AND amending=1 AND n_articles>=?",
-            (lang, FULL_LAW_MIN_ART)) if re.match(r"^\s*[«\"“„][^»\"”]{4,200}[»\"”]", r["title"] or "")}
+            (lang, FULL_LAW_MIN_ART)) if _ONE_LAW_AMEND.match(r["title"] or "")}
     return _full[lang]
 
 
