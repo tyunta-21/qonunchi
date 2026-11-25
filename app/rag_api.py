@@ -716,7 +716,8 @@ def _postprocess(answer, citations, overview_meta=None):
         title, meta = overview_meta
         num = meta.split(",")[0].strip()
         if re.search(r"\d", num) and num not in answer:
-            answer = f"{title} ({re.sub(r'\s*\([^)]*\)', '', meta)}). " + answer
+            ref = next((c["ref"] for c in citations if c.get("doc_title") == title), citations[0]["ref"])
+            answer = f"{title} ({re.sub(r'\s*\([^)]*\)', '', meta)}) [{ref}]. " + answer
     return answer
 
 
