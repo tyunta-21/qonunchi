@@ -15,7 +15,7 @@ from . import db, semantic, llm
 from .textnorm import norm, terms
 from .translit import detect, cyr_to_lat, db_lang
 
-PIPELINE_VERSION = "0.3.4"
+PIPELINE_VERSION = "0.3.5"
 SYNC_TIMEOUT = float(os.environ.get("RAG_SYNC_TIMEOUT", "110"))
 ITEM_TIMEOUT = float(os.environ.get("RAG_ITEM_TIMEOUT", "60"))
 WORKERS = int(os.environ.get("RAG_WORKERS", "10"))
@@ -238,7 +238,7 @@ EXPAND = [
     (r"\bbola\w* (bilan )?(ko['ʻ‘’`]?rish|uchrash)\w*|\bвидеться с ребенк\w*|\bобщени\w* с ребенк\w*", "boladan alohida yashayotgan otaning ota-onalik huquqi родитель проживающий отдельно от ребенка"),
     (r"\bvasiyat\w*.*(qoldirmad|chetlat|bermad)|\bобязательн\w* дол\w*", "merosdan majburiy ulush обязательная доля в наследстве"),
     (r"\btunda\b|\btungi\b|\bночью\b|\bночн\w*", "tungi vaqtdagi mehnat ночное время"),
-    (r"\bmaosh\w*", "ish haqi"),
+    (r"\bmaosh\w*", "ish haqi"), (r"\byillik\b", "har yilgi"),
     (r"\bajrash\w*|\bajralish\w*|\bразвод\w*|\bразвест\w*", "nikohdan ajratish nikohni bekor qilish расторжение брака"),
     (r"\basrab ol\w*|\bусынов\w*|\bудочер\w*", "farzandlikka olish усыновление"),
     (r"\bortiqcha ish\w*|\bqo['ʻ‘’`]?shimcha ish soat\w*|\bсверхурочн\w*", "ish vaqtidan tashqari ish сверхурочные работы"),
@@ -318,6 +318,21 @@ def _doc_titles(lang):
                          for r in db.conn().execute("SELECT key, title, form, amending, n_articles FROM docs "
                                                     "WHERE lang=? AND active=1", (lang,))]
     return _titles[lang]
+
+
+_full = {}
+FULL_LAW_MIN_ART = 15
+
+
+def full_text_amending(lang):
+    """Многие законы есть в базе только как «“X”gi Qonuniga oʻzgartish… kiritish haqida». Если такой акт
+    меняет один закон и в нём много статей, это фактически полный текст закона, и штрафовать его как
+    «поправку» нельзя."""
+    if lang not in _full:
+        _full[lang] = {r["key"] for r in db.conn().execute(
+            "SELECT key, title, n_articles FROM docs WHERE lang=? AND active=1 AND amending=1 AND n_articles>=?",
+            (lang, FULL_LAW_MIN_ART)) if re.match(r"^\s*[«\"“„][^»\"”]{4,200}[»\"”]", r["title"] or "")}
+    return _full[lang]
 
 
 def named_docs(question, lang):
@@ -467,12 +482,13 @@ def retrieve(question, lang, rewritten, k, as_of=None, orig_rows=None):
     nq = norm(question)
     topics = [norm(rep) for _, rep in EXPAND if norm(rep) in nq and len(rep) > 12]
     scored = []
+    full_amend = full_text_amending(lang)
     for r, rs in cands.values():
         cov = (0.6 * _cover(r, t_new) + 0.4 * _cover(r, t_orig)) if t_new else _cover(r, t_orig)
         hp = max(_head_precision(r, t_new), _head_precision(r, t_orig))
         sc = W_COV * cov + W_HP * hp + W_RS * rs
         sc *= _special_penalty(r, question, rewritten)
-        if r["amending"] and r["key"] not in named:   # акты «о внесении изменений» — не основной текст нормы
+        if r["amending"] and r["key"] not in named and r["key"] not in full_amend:   # «о внесении изменений»
             sc *= 0.6
         if r["key"] in hinted:
             sc += CODE_BOOST
