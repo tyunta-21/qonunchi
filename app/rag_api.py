@@ -15,7 +15,7 @@ from . import db, semantic, llm
 from .textnorm import norm, terms
 from .translit import detect, cyr_to_lat, db_lang
 
-PIPELINE_VERSION = "0.3.5"
+PIPELINE_VERSION = "0.3.6"
 SYNC_TIMEOUT = float(os.environ.get("RAG_SYNC_TIMEOUT", "110"))
 ITEM_TIMEOUT = float(os.environ.get("RAG_ITEM_TIMEOUT", "60"))
 WORKERS = int(os.environ.get("RAG_WORKERS", "10"))
@@ -309,7 +309,9 @@ def _abbr(q):
 
 
 def _name_terms(text):
-    return [w for w in re.findall(r"\w+", _abbr(text)) if w not in _NAME_STOP and len(w) > 1]
+    return [w for w in re.findall(r"\w+", _abbr(text))
+            if w not in _NAME_STOP and len(w) > 1 and not w.isdigit() and not re.match(r"^\d+-?yil", w)
+            and w not in ("yilgi", "yildagi", "hozir", "amaldami", "kuchdami")]
 
 
 def _doc_titles(lang):
@@ -368,6 +370,74 @@ def named_docs(question, lang):
     return list(dict.fromkeys(found))
 
 
+_old_titles = {}
+LAW_FORMS = ("Закон", "Кодекс", "Конституция")
+_STATUS_Q = re.compile(r"amalda(mi)?\b|kuchda(mi)?\b|kuchini yo\W?qot|bekor qilingan|действу|утрат", re.I)
+
+
+def _inactive_titles(lang):
+    if lang not in _old_titles:
+        _old_titles[lang] = [(r["key"], norm(r["title"]), r["form"], r["amending"], r["n_articles"] or 0,
+                              (r["date"] or "")[-4:])
+                             for r in db.conn().execute("SELECT key, title, form, amending, n_articles, date FROM docs "
+                                                        "WHERE lang=? AND active=0 AND form IN ('Закон','Кодекс',"
+                                                        "'Конституция')", (lang,))]
+    return _old_titles[lang]
+
+
+def named_inactive(question, lang, active_named=()):
+    """Закон или кодекс, утративший силу, который назван в вопросе: «1995-yilgi Mehnat kodeksi hozir amaldami?»,
+    «Suv va suvdan foydalanish qonuni?» (закон заменён Водным кодексом). Берём его, только если в вопросе есть год
+    этого документа, или спрашивают о статусе, или действующего закона с таким названием нет."""
+    qn = _abbr(question)
+    names = re.findall(r"[«\"“„]([^»\"”“]{4,160})[»\"”“]", question)
+    names += [m.group(1) for m in re.finditer(r"([\w\- ]{3,80}?)\s+(kodeksi|kodeks|qonuni|qonun|кодекс\w*)\b", qn)]
+    years = set(re.findall(r"\b(19\d\d|20\d\d)\b", question))
+    has_active_law = any((db.doc(k, lang) or {"form": ""})["form"] in LAW_FORMS for k in active_named)
+    ask_status = bool(_STATUS_Q.search(qn))
+    out = []
+    for name in names:
+        ts = [t[: max(4, len(t) - 2)] for t in _name_terms(name)]
+        if not ts:
+            continue
+        best = []
+        for key, title, form, amending, n_art, year in _inactive_titles(lang):
+            tt = re.sub(r"[^\w ]", " ", title)
+            if not all(t in tt for t in ts) or n_art < 5:
+                continue
+            if years and year not in years:
+                continue
+            if not (years or ask_status or not has_active_law):
+                continue
+            extra = len(_name_terms(title)) - len(ts)
+            best.append((amending or 0, extra, -n_art, key))
+        best.sort()
+        out += [b[-1] for b in best[:1]]
+    return list(dict.fromkeys(out))[:1]
+
+
+def replaced_by(old_key, lang):
+    """Статья действующего акта, которая признала документ утратившим силу («...161-I-sonli Qonuni ...
+    oʻz kuchini yoʻqotgan deb topilsin»). Ищем по номеру документа (у кодекса — номер закона об утверждении)."""
+    d = db.doc(old_key, lang)
+    if d is None:
+        return None
+    num = (d["number"] or _approving_number(d) or "").replace("-сон", "").strip()
+    if not re.search(r"\d", num):
+        return None
+    words = "утратившими силу" if lang == "ru" else "kuchini yoʻqotgan"
+    rows = db.search_articles(f"{num} {words}", lang, limit=30, active_only=True, mode="AND", count=False)[0]
+    name = set(_name_terms(re.sub(r"(ni|ning)?\s+tasdiqlash.*$", "", d["title"])))
+    best = []
+    for r in rows:
+        if not re.search(r"(?<![\w-])" + re.escape(num) + r"(?![\w])", r["text"] or ""):
+            continue
+        same = len(name & set(_name_terms(r["doc_title"])))
+        best.append((-same, r["id"]))
+    best.sort()
+    return best[0][1] if best else None
+
+
 def is_overview(question, keys, lang):
     """Вопрос только о самом документе («...gi Qonun?», «Soliq kodeksi?»): кроме названия, почти нет слов."""
     if not keys:
@@ -393,6 +463,7 @@ SEM_BONUS = 0.05      # прибавка к итоговому баллу за �
 SEM_SPAN = 0.05
 CONST_WEIGHT = 0.9     # балл поиска внутри Конституции относительно её лучшей статьи
 INTRO_BOOST = 0.5      # первые статьи документа на вопрос-обзор
+OLD_BOOST = 0.2        # первые статьи утратившего силу закона, названного в вопросе
 _const_key = {}
 
 
@@ -437,6 +508,19 @@ def retrieve(question, lang, rewritten, k, as_of=None, orig_rows=None):
             for i, r in enumerate(db.articles_by_ids(first)):
                 cands[r["id"]] = (r, 1.0)
                 intro[r["id"]] = INTRO_BOOST - 0.05 * first.index(r["id"])
+    # утративший силу закон, названный в вопросе (не для запроса «на дату»: тогда статус мог быть другим)
+    for key in ([] if as_of else named_inactive(question, lang, named)):
+        arts = [a for a in db.articles(key, lang) if a["article"]]
+        arts.sort(key=lambda a: int(re.match(r"\d+", a["article"]).group()) if re.match(r"\d+", a["article"]) else 9999)
+        first = [a["id"] for a in arts[:2]]
+        for r in db.articles_by_ids(first):
+            cands[r["id"]] = (r, 1.0)
+            intro[r["id"]] = OLD_BOOST - 0.05 * first.index(r["id"])
+        rep = replaced_by(key, lang)     # статья, которая отменила документ: она и отвечает «действует ли»
+        if rep:
+            for r in db.articles_by_ids([rep]):
+                cands[r["id"]] = (r, 1.0)
+                intro[r["id"]] = INTRO_BOOST
     ck = constitution_key(lang)
     if ck and ck not in hinted:
         rows = db.search_articles(rewritten or question, lang, limit=CONST_LIMIT, active_only=True, key=ck, count=False)[0]
@@ -794,7 +878,13 @@ def answer_item(item, opts):
         else:
             user = f"Contexts:\n\n{_contexts_block(ctxs)}\n\nQuestion: {question}"
             named = named_docs(q_search, lang)
-            if is_overview(q_search, named, lang):
+            old_docs = [] if opts.get("as_of_date") else named_inactive(q_search, lang, named)
+            if old_docs:
+                d = db.doc(old_docs[0], lang)
+                user += (f"\n\nThe question names a document that is NOT in force: {d['title']} ({_doc_meta(d)}; "
+                         f"{d['status_warning'] or 'kuchini yoʻqotgan'}). Say clearly that it is not in force and since "
+                         f"when, cite it, and name the act in force on this subject if a context shows it.")
+            elif is_overview(q_search, named, lang):
                 d = db.doc(named[0], lang)
                 if d is not None:
                     overview_meta = (d["title"], _doc_meta(d))
