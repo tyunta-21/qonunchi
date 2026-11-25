@@ -42,6 +42,19 @@ python build_db.py ../lexuz/data data/laws.db
 
 (или просто удалите `data/laws.db` и запустите `start.bat` / `start.sh`, база соберётся сама).
 
+## Смысловой поиск (необязательно, без ключей)
+
+Кроме поиска по словам, помощник ищет статьи по смыслу (модель multilingual-e5-small, ~120 МБ, работает на обычном
+процессоре, ключ не нужен). Один раз после сборки базы:
+
+```
+pip install fastembed numpy
+python build_embeddings.py data/laws.db
+```
+
+Это ~30 минут на язык. Появятся файлы `data/emb_uz.npy`, `data/emb_ru.npy`. Без них поиск работает как раньше,
+только по словам. Отключить: `SEMANTIC=0` в `.env`.
+
 ## Как выложить в интернет (потом)
 
 Самый дешёвый вариант — маленький VPS за 4–6 $ в месяц (Hetzner, DigitalOcean, местные хостинги): там запускается `start.sh` или `Dockerfile`. Подойдут и Render / Railway (через Dockerfile). Ключ задаётся там в настройках как переменная `OPENAI_API_KEY`, а не в файле.

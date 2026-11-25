@@ -11,7 +11,7 @@ from collections import defaultdict, deque
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 
-from . import db, llm
+from . import db, semantic, llm
 from .textnorm import norm, terms
 from .translit import detect, cyr_to_lat, db_lang
 
@@ -354,6 +354,11 @@ def is_overview(question, keys, lang):
 # Конституция: короткие вопросы о государственном устройстве («Prezident necha yilga saylanadi?») часто не называют её,
 # а общий поиск тонет в статьях других законов. Поэтому статьи Конституции всегда ищутся отдельно и попадают в кандидаты.
 CONST_LIMIT = 6
+SEM_K = 20            # сколько статей берём из смыслового поиска
+SEM_WEIGHT = 0.9      # балл поиска для самой близкой по смыслу статьи
+SEM_SLOPE = 4.0       # насколько быстро он падает с расстоянием (косинус e5 лежит в узком диапазоне)
+SEM_BONUS = 0.05      # прибавка к итоговому баллу за близость по смыслу
+SEM_SPAN = 0.05
 CONST_WEIGHT = 0.9     # балл поиска внутри Конституции относительно её лучшей статьи
 INTRO_BOOST = 0.5      # первые статьи документа на вопрос-обзор
 _const_key = {}
@@ -387,6 +392,7 @@ W_COV, W_HP, W_RS = 0.35, 0.25, 0.4   # вес: покрытие слов воп
 
 def retrieve(question, lang, rewritten, k, as_of=None, orig_rows=None):
     cands = {}
+    sem_bonus = {}
     hinted = code_keys(question)
     named = named_docs(question, lang)
     hinted |= set(named)
@@ -415,6 +421,20 @@ def retrieve(question, lang, rewritten, k, as_of=None, orig_rows=None):
             best = -rows[0]["score"] or 1.0
             for r in rows:
                 cands.setdefault(r["id"], (r, round(min(1.0, 0.8 * max(0.0, -r["score"]) / best), 4)))
+    # смысловой поиск: статьи, близкие по смыслу, даже если слова вопроса в них не встречаются
+    sem = semantic.search(question, lang, db.DB_PATH, SEM_K) if SEM_WEIGHT else []
+    if sem:
+        top_sim = sem[0][1]
+        rows = {r["id"]: r for r in db.articles_by_ids([i for i, _ in sem])}
+        for aid, sim in sem:
+            r = rows.get(aid)
+            if r is None or not r["active"]:
+                continue
+            rs = round(max(0.0, SEM_WEIGHT - SEM_SLOPE * (top_sim - sim)), 4)
+            prev = cands.get(aid)
+            if not prev or rs > prev[1]:
+                cands[aid] = (r, rs)
+            sem_bonus[aid] = SEM_BONUS * max(0.0, 1 - (top_sim - sim) / SEM_SPAN)
     for q, weight in ((rewritten, 1.0), (question, 0.9)):
         if not q:
             continue
@@ -444,7 +464,7 @@ def retrieve(question, lang, rewritten, k, as_of=None, orig_rows=None):
             sc += CODE_BOOST
         if topics and "chapter" in r.keys() and any(t in norm(r["chapter"] or "") for t in topics):
             sc += SECTION_BOOST   # раздел кодекса совпадает с темой (напр. «Qoʻshilgan qiymat soligʻi»)
-        sc += intro.get(r["id"], 0.0)
+        sc += intro.get(r["id"], 0.0) + sem_bonus.get(r["id"], 0.0)
         if r["form"] in ("Кодекс", "Конституция"):
             sc += 0.05
         elif r["form"] == "Закон":
