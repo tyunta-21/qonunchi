@@ -15,7 +15,7 @@ from . import db, semantic, llm
 from .textnorm import norm, terms
 from .translit import detect, cyr_to_lat, db_lang
 
-PIPELINE_VERSION = "0.3.2"
+PIPELINE_VERSION = "0.3.3"
 SYNC_TIMEOUT = float(os.environ.get("RAG_SYNC_TIMEOUT", "110"))
 ITEM_TIMEOUT = float(os.environ.get("RAG_ITEM_TIMEOUT", "60"))
 WORKERS = int(os.environ.get("RAG_WORKERS", "10"))
@@ -556,10 +556,32 @@ STATUS_NAME = {"amalda": "amalda (действует)", "kuchini_yoqotgan": "kuc
                "yangi_tahrirda": "yangi tahrirda (заменён новой редакцией)", "kuchga_kirmagan": "hali kuchga kirmagan"}
 
 
+def _approving_number(r):
+    """У кодексов в базе номер пустой: он у закона «...kodeksini tasdiqlash» / «Об утверждении ...кодекса»
+    с той же датой. Берём номер оттуда."""
+    keys = r.keys()
+    if "key" not in keys or not r["date"]:
+        return ""
+    title = r["doc_title"] if "doc_title" in keys else r["title"]
+    if not re.search(r"kodeks|кодекс", title or "", re.I):
+        return ""
+    lang = r["lang"] if "lang" in keys else "uz"
+    word = lambda t: (re.search(r"([\w‘ʻ’'-]+)\s+(?:kodeks|кодекс)", t or "", re.I) or [None, ""])[1]
+    w0 = norm(word(title))
+    same = lambda w: bool(w0) and abs(len(w) - len(w0)) <= 3 and w[:max(4, len(w0) - 3)] == w0[:max(4, len(w0) - 3)]
+    rows = db.conn().execute(
+        "SELECT title, number FROM docs WHERE lang=? AND date=? AND key<>? AND number<>'' "
+        "AND (title LIKE '%kodeksini tasdiq%' OR title LIKE '%Об утверждении%кодекс%')",
+        (lang, r["date"], r["key"])).fetchall()
+    rows = [x for x in rows if same(norm(word(x["title"])))]
+    return rows[0]["number"] if len(rows) == 1 else ""
+
+
 def _doc_meta(r):
     """«O‘RQ-682-сон, 20.04.2021, amalda» — чтобы модель могла назвать номер, дату и статус документа."""
     keys = r.keys()
-    num = (r["number"] or "").replace("-сон", "").strip() if "number" in keys else ""
+    num = (r["number"] or "").strip() if "number" in keys else ""
+    num = (num or _approving_number(r)).replace("-сон", "").strip()
     date = r["date"] if "date" in keys else ""
     st = r["doc_status"] if "doc_status" in keys and r["doc_status"] else ("amalda" if r["active"] else "kuchini_yoqotgan")
     return ", ".join(x for x in (num, date, STATUS_NAME.get(st, st)) if x)
@@ -663,6 +685,41 @@ def _doc_type(form):
 
 
 # ---------------------------------------------------------------- один вопрос
+_LEAK = [(re.compile(r"\bkontekst", re.I), "manba"), (re.compile(r"\bконтекст", re.I), "источник"),
+         (re.compile(r"\bcontext", re.I), "source")]
+
+
+def _words(t):
+    return {w for w in re.findall(r"\w{4,}", norm(t or ""))}
+
+
+def _postprocess(answer, citations, overview_meta=None):
+    """Страховка поверх промпта: служебное слово «kontekst» → «manba»; если модель дала цитаты, но не поставила
+    в тексте [n], ставим их в конец самого похожего на цитату предложения; в ответе на вопрос о законе
+    целиком добавляем номер и дату, если модель их пропустила."""
+    for pat, rep in _LEAK:
+        answer = pat.sub(rep, answer)
+    answer = answer[:1].upper() + answer[1:]
+    if citations and not re.search(r"\[\d+\]", answer):
+        parts = re.split(r"(?<=[.!?;])\s+", answer.strip())
+        marks = {}
+        for c in citations:
+            q = _words(c.get("quote"))
+            best = max(range(len(parts)), key=lambda i: (len(q & _words(parts[i])), -i))
+            marks.setdefault(best, []).append(c["ref"])
+        for i, refs in marks.items():
+            p = parts[i]
+            tail = re.search(r"[.!?;:]*$", p).group(0)
+            parts[i] = p[:len(p) - len(tail)].rstrip() + " " + "".join(f"[{r}]" for r in refs) + tail
+        answer = " ".join(parts)
+    if overview_meta and citations:
+        title, meta = overview_meta
+        num = meta.split(",")[0].strip()
+        if re.search(r"\d", num) and num not in answer:
+            answer = f"{title} ({re.sub(r'\s*\([^)]*\)', '', meta)}). " + answer
+    return answer
+
+
 def answer_item(item, opts):
     t0 = time.time()
     qid, question = item["id"], item["question"]
@@ -692,6 +749,7 @@ def answer_item(item, opts):
         res.update(status="error", error={"code": "RETRIEVAL_FAILED", "message": str(e)[:300], "retryable": True})
         return res
     tg = time.time()
+    overview_meta = None
     try:
         if llm.PROVIDER == "mock":
             out, u2 = _mock_generate(question, ctxs, alang), {"input_tokens": 0, "output_tokens": 0}
@@ -704,6 +762,7 @@ def answer_item(item, opts):
             if is_overview(q_search, named, lang):
                 d = db.doc(named[0], lang)
                 if d is not None:
+                    overview_meta = (d["title"], _doc_meta(d))
                     user += (f"\n\nThe question asks about the document as a whole: {d['title']} "
                              f"({_doc_meta(d)}). Name its number, date and status, then what it regulates.")
             text, u2 = _llm_text(GEN_SYSTEM.format(lang_name=LANG_NAME[alang]), user, json_mode=True,
@@ -761,6 +820,7 @@ def answer_item(item, opts):
                           "chunk_id": _chunk_id(r), "part_chunk_id": part_cid, "quote": quote})
     answer = out.get("answer") or ""
     answer = re.sub(r"\[(\d+)\]", lambda m: f"[{renum[int(m[1])]}]" if int(m[1]) in renum else "", answer).strip()
+    answer = _postprocess(answer, citations, overview_meta)
     no_answer = bool(out.get("no_answer")) or not citations
     if no_answer:
         citations, answer = [], (answer if out.get("no_answer") else NO_ANSWER[alang])
