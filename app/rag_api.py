@@ -15,7 +15,7 @@ from . import db, semantic, llm
 from .textnorm import norm, terms
 from .translit import detect, cyr_to_lat, db_lang
 
-PIPELINE_VERSION = "0.3.7"
+PIPELINE_VERSION = "0.3.8"
 SYNC_TIMEOUT = float(os.environ.get("RAG_SYNC_TIMEOUT", "110"))
 ITEM_TIMEOUT = float(os.environ.get("RAG_ITEM_TIMEOUT", "60"))
 WORKERS = int(os.environ.get("RAG_WORKERS", "10"))
@@ -262,7 +262,11 @@ CODE_HINTS = [
     # вопросы о государственном устройстве — это Конституция, даже если она не названа
     (r"\bprezident\w*|oliy majlis|\bsenat\w*|qonunchilik palatas|qoraqalpogiston respublikas|davlat til|"
      r"hokimiyat\w* bolin|президент|олий мажлис|сенат\w*|законодательн\w* палат|разделени\w* власт|государственн\w* язык",
-     "konstitutsiya"), (r"mehnat kodeks|трудов\w* кодекс", "mehnat kodeksi"),
+     "konstitutsiya"),
+    # основная тема отрасли без названия кодекса: земля -> Yer kodeksi, брак и алименты -> Oila kodeksi
+    (r"\byer\b|\byerni\b|\byer uchastka|земельн\w* участ|\bземл[яеиюь]\w*", "yer kodeksi"),
+    (r"\bnikoh\w*|\bajrash\w*|\baliment\w*|\bбрак\b|\bбрака\b|развод\w*|алимент\w*", "oila kodeksi"),
+    (r"mehnat kodeks|трудов\w* кодекс", "mehnat kodeksi"),
     (r"fuqarolik kodeks|гражданск\w* кодекс", "fuqarolik kodeksi"), (r"oila kodeks|семейн\w* кодекс", "oila kodeksi"),
     (r"jinoyat kodeks|уголовн(ый|ого|ом|ому) кодекс", "jinoyat kodeksi"),
     (r"jinoyat.protsessual|уголовно.процессуальн", "jinoyat-protsessual"),
@@ -655,10 +659,16 @@ def _llm_text(system, user, small=False, json_mode=False, temperature=0, seed=No
             kw["max_tokens"] = 80      # ключевые слова короткие: меньше ждать
         if seed is not None:
             kw["seed"] = seed
-        try:
-            r = client.chat.completions.create(temperature=temperature, **kw)
-        except BadRequestError:  # некоторые модели не принимают temperature
+        if re.match(r"(gpt-5|o\d)", kw["model"]):   # рассуждающие модели: без temperature, свой лимит токенов
+            if "max_tokens" in kw:
+                kw["max_completion_tokens"] = max(kw.pop("max_tokens"), 2000)
+            kw["reasoning_effort"] = os.environ.get("OPENAI_REASONING_EFFORT", "low")
             r = client.chat.completions.create(**kw)
+        else:
+            try:
+                r = client.chat.completions.create(temperature=temperature, **kw)
+            except BadRequestError:  # некоторые модели не принимают temperature
+                r = client.chat.completions.create(**kw)
         if r.usage:
             usage = {"input_tokens": r.usage.prompt_tokens, "output_tokens": r.usage.completion_tokens}
         return r.choices[0].message.content or "", usage

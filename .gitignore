@@ -7,3 +7,4 @@ data/*.db-*
 eval/runs/
 *.zip
 data/emb_*.npy
+eval/lex100_graded.csv
