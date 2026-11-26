@@ -264,7 +264,8 @@ CODE_HINTS = [
      r"hokimiyat\w* bolin|президент|олий мажлис|сенат\w*|законодательн\w* палат|разделени\w* власт|государственн\w* язык",
      "konstitutsiya"),
     # основная тема отрасли без названия кодекса: земля -> Yer kodeksi, брак и алименты -> Oila kodeksi
-    (r"\byer\b|\byerni\b|\byer uchastka|земельн\w* участ|\bземл[яеиюь]\w*", "yer kodeksi"),
+    # («yerda/yerdan» не берём: «u yerda» значит «там»)
+    (r"\byer(i|ni|ini|ga|iga|idan|lar|lari|larini|larga)?\b|\byer uchastka|земельн\w* участ|\bземл[яеиюь]\w*", "yer kodeksi"),
     (r"\bnikoh\w*|\bajrash\w*|\baliment\w*|\bбрак\b|\bбрака\b|развод\w*|алимент\w*", "oila kodeksi"),
     (r"mehnat kodeks|трудов\w* кодекс", "mehnat kodeksi"),
     (r"fuqarolik kodeks|гражданск\w* кодекс", "fuqarolik kodeksi"), (r"oila kodeks|семейн\w* кодекс", "oila kodeksi"),

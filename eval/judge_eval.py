@@ -69,7 +69,8 @@ def judge(question, etalon, refs, answer):
 
 
 def score(grades):
-    return sum(POINTS.get(g, 0.0) for g in grades)
+    """Балл по оценённым ответам; сбои вызова судьи («error») не считаются ни плюсом, ни минусом."""
+    return sum(POINTS.get(g, 0.0) for g in grades if g != "error")
 
 
 def run(items, workers):
@@ -98,7 +99,11 @@ def main():
                 print(f"бот {bot!r} не найден в {GRADED}"); continue
             res = run([(r["question"], r["etalon"], references(by_q[r["id"]], skip_bot=bot), r["answer"])
                        for r in rows], a.workers)
-            human = [r["grade"] for r in rows]; mine = [g for g, _ in res]
+            pairs = [(r["grade"], g) for r, (g, _) in zip(rows, res) if g != "error"]
+            if len(pairs) < len(rows):
+                print(f"{bot}: судья не ответил на {len(rows) - len(pairs)} из {len(rows)}, они не считаются")
+            rows = [r for r, (g, _) in zip(rows, res) if g != "error"]
+            human = [h for h, _ in pairs]; mine = [m for _, m in pairs]
             agree = sum(h == m for h, m in zip(human, mine))
             near = sum(h == m or {h, m} <= {"верно", "частично"} for h, m in zip(human, mine))
             print(f"\n{bot}: совпадение {agree}/{len(rows)}, верно/частично спутаны ещё в {near - agree}")
@@ -130,7 +135,9 @@ def main():
     print(f"вопросов {len(ours)} за {time.time() - t0:.0f} с, модель судьи {MODEL}")
     for g in GRADES + (["error"] if c["error"] else []):
         print(f"{g:12} {c[g]:4}   (в официальной таблице было {oc[g]})")
-    print(f"балл {score([g for g, _ in res]):.1f} из {len(ours)}   (было {score([old.get(r['id'], '') for r in ours]):.1f})")
+    ok = [(r, g) for r, (g, _) in zip(ours, res) if g != "error"]
+    print(f"балл {score([g for _, g in ok]):.1f} из {len(ok)}   (было {score([old.get(r['id'], '') for r, _ in ok]):.1f} "
+          f"на тех же вопросах)")
     print(f"таблица по вопросам: {out}")
 
 
