@@ -10,7 +10,7 @@
 При --calibrate судья оценивает ответы названных ботов из той же таблицы, а ответ самого бота в образцы не берёт;
 печатается совпадение с оценками людей и балл судьи рядом с официальным.
 """
-import argparse, collections, csv, json, os, sys, time
+import argparse, collections, csv, json, os, sys, threading, time
 from concurrent.futures import ThreadPoolExecutor
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -20,6 +20,8 @@ GRADED = os.path.join(os.path.dirname(os.path.abspath(__file__)), "lex100_graded
 MODEL = os.environ.get("JUDGE_MODEL", "gpt-4.1")
 GRADES = ["верно", "частично", "неверно", "нет ответа"]
 POINTS = {"верно": 1.0, "частично": 0.5}
+TOKENS = [0, 0]
+_lock = threading.Lock()
 
 PROMPT = """You grade answers of legal question-answering bots about the legislation of Uzbekistan, the way human
 graders did for the LEX_100 table. Grades:
@@ -59,6 +61,9 @@ def judge(question, etalon, refs, answer):
             r = OpenAI().chat.completions.create(
                 model=MODEL, temperature=0, seed=42, response_format={"type": "json_object"},
                 messages=[{"role": "system", "content": PROMPT}, {"role": "user", "content": "\n\n".join(msg)}])
+            if r.usage:
+                with _lock:
+                    TOKENS[0] += r.usage.prompt_tokens; TOKENS[1] += r.usage.completion_tokens
             d = json.loads(r.choices[0].message.content or "{}")
             g = d.get("grade", "").strip().lower()
             return (g if g in GRADES else "неверно"), d.get("missing", "")
@@ -139,6 +144,7 @@ def main():
     print(f"балл {score([g for _, g in ok]):.1f} из {len(ok)}   (было {score([old.get(r['id'], '') for r, _ in ok]):.1f} "
           f"на тех же вопросах)")
     print(f"таблица по вопросам: {out}")
+    print(f"токены судьи: вход {TOKENS[0]:,}, выход {TOKENS[1]:,}".replace(",", " "))
 
 
 if __name__ == "__main__":

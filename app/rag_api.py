@@ -696,7 +696,11 @@ def _llm_text(system, user, small=False, json_mode=False, temperature=0, seed=No
             if "max_tokens" in kw:
                 kw["max_completion_tokens"] = max(kw.pop("max_tokens"), 2000)
             kw["reasoning_effort"] = os.environ.get("OPENAI_REASONING_EFFORT", "low")
-            r = client.chat.completions.create(**kw)
+            try:
+                r = client.chat.completions.create(**kw)
+            except BadRequestError:  # модель не приняла seed или reasoning_effort
+                kw.pop("seed", None); kw.pop("reasoning_effort", None)
+                r = client.chat.completions.create(**kw)
         else:
             try:
                 r = client.chat.completions.create(temperature=temperature, **kw)

@@ -31,13 +31,17 @@ def main():
         rows = rows[: a.limit]
     os.makedirs(os.path.dirname(a.out) or ".", exist_ok=True)
     stat = dict(n=0, answered=0, cite=0, doc_ok=0, art_ok=0, gold_n=0, meta_ok=0, meta_n=0, refuse_ok=0, trap_n=0,
-                false_no=0, ans_n=0, leak=0)
+                false_no=0, ans_n=0, leak=0, tin=0, tout=0)
     out = csv.writer(open(a.out, "w", encoding="utf-8", newline=""))
     out.writerow(["id", "question", "no_answer", "answer", "cited", "doc_ok", "art_ok", "meta_ok"])
     t0 = time.time()
     for r in rows:
         res = rag_api.answer_item({"id": r["id"], "question": r["question"]}, {"top_k": 5, "temperature": 0, "seed": 42})
         ans, no = res.get("answer") or "", bool(res.get("no_answer"))
+        u = res.get("usage") or {}
+        stat["tin"] += u.get("input_tokens", 0); stat["tout"] += u.get("output_tokens", 0)
+        if res.get("status") in ("error", "timeout"):
+            print(r["id"], "ОШИБКА", res.get("error"), flush=True)
         cited = [(c["doc_id"], c["article"]) for c in res.get("citations") or []]
         gold = [(g.split("#")[0], g.split("#")[1]) for g in (r.get("gold") or "").split(";") if g]
         gd = {d for d, _ in gold}
@@ -68,6 +72,7 @@ def main():
     print("номер+год у обзоров закона", p(stat["meta_ok"], stat["meta_n"]))
     print("отказ на ловушках         ", p(stat["refuse_ok"], stat["trap_n"]))
     print("утечки «kontekst»         ", stat["leak"])
+    print(f"токены: вход {stat['tin']:,}, выход {stat['tout']:,} (модель {llm.OPENAI_MODEL})".replace(",", " "))
 
 
 if __name__ == "__main__":
