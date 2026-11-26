@@ -15,7 +15,7 @@ from . import db, semantic, llm
 from .textnorm import norm, terms
 from .translit import detect, cyr_to_lat, db_lang
 
-PIPELINE_VERSION = "0.3.7"
+PIPELINE_VERSION = "0.3.10"
 SYNC_TIMEOUT = float(os.environ.get("RAG_SYNC_TIMEOUT", "110"))
 ITEM_TIMEOUT = float(os.environ.get("RAG_ITEM_TIMEOUT", "60"))
 WORKERS = int(os.environ.get("RAG_WORKERS", "10"))
@@ -252,6 +252,13 @@ EXPAND = [
     (r"\bзарплат\w*", "заработная плата"), (r"\bуволь\w*|\bуволен\w*", "расторжение трудового договора"),
     (r"\bmerosxo['ʻ‘’`]?r\w*|\bнаследств\w*|\bнаследник\w*", "meros vorislik наследование"),
     (r"\bворовств\w*|\bукра(л|ли|ла|сть|ден|дут)\w*|\bкраж\w*", "кража"),
+    (r"\bketma.ket\b", "surunkasiga"),
+    # «BHM / eng kam ish haqi qancha?» — сумма задаётся указом о повышении зарплат и пенсий, а не кодексом
+    (r"(\bbhm\b|bazaviy hisoblash miqdor\w*|eng kam ish haqi|\bбрв\b|базов\w* расч[её]тн\w* величин\w*|"
+     r"минимальн\w* (размер )?(оплаты труда|заработн\w*))\W*.*\b(qancha|necha|miqdori\s*\?|сколько|размер)",
+     "ish haqi pensiyalar nafaqalar miqdorini oshirish soʻm повышении размеров заработной платы пенсий сум"),
+    (r"kuchini yo\W?qotgan\W*\s+hujjat|утративш\w* сил\w* (документ|акт)",
+     "normativ-huquqiy hujjatning amal qilishini tugatish прекращение действия нормативно-правового акта"),
 ]
 
 
@@ -262,7 +269,12 @@ CODE_HINTS = [
     # вопросы о государственном устройстве — это Конституция, даже если она не названа
     (r"\bprezident\w*|oliy majlis|\bsenat\w*|qonunchilik palatas|qoraqalpogiston respublikas|davlat til|"
      r"hokimiyat\w* bolin|президент|олий мажлис|сенат\w*|законодательн\w* палат|разделени\w* власт|государственн\w* язык",
-     "konstitutsiya"), (r"mehnat kodeks|трудов\w* кодекс", "mehnat kodeksi"),
+     "konstitutsiya"),
+    # основная тема отрасли без названия кодекса: земля -> Yer kodeksi, брак и алименты -> Oila kodeksi
+    # («yerda/yerdan» не берём: «u yerda» значит «там»)
+    (r"\byer(i|ni|ini|ga|iga|idan|lar|lari|larini|larga)?\b|\byer uchastka|земельн\w* участ|\bземл[яеиюь]\w*", "yer kodeksi"),
+    (r"\bnikoh\w*|\bajrash\w*|\baliment\w*|\bбрак\b|\bбрака\b|развод\w*|алимент\w*", "oila kodeksi"),
+    (r"mehnat kodeks|трудов\w* кодекс", "mehnat kodeksi"),
     (r"fuqarolik kodeks|гражданск\w* кодекс", "fuqarolik kodeksi"), (r"oila kodeks|семейн\w* кодекс", "oila kodeksi"),
     (r"jinoyat kodeks|уголовн(ый|ого|ом|ому) кодекс", "jinoyat kodeksi"),
     (r"jinoyat.protsessual|уголовно.процессуальн", "jinoyat-protsessual"),
@@ -298,7 +310,7 @@ _NAME_STOP = {"qonun", "qonuni", "qonunlari", "qonunning", "kodeks", "kodeksi", 
               "togrisidagi", "amaldagi", "закон", "закона", "кодекс", "кодекса", "о", "об", "оʻzbekiston", "ozbekiston",
               "respublikasi", "respublikasining", "uchun", "nima", "nimani", "deydi", "haqida", "va"}
 _titles = {}
-INTRO_ARTICLES = 3
+INTRO_ARTICLES = 5
 
 
 def _abbr(q):
@@ -309,9 +321,11 @@ def _abbr(q):
 
 
 def _name_terms(text):
-    return [w for w in re.findall(r"\w+", _abbr(text))
-            if w not in _NAME_STOP and len(w) > 1 and not w.isdigit() and not re.match(r"^\d+-?yil", w)
-            and w not in ("yilgi", "yildagi", "hozir", "amaldami", "kuchdami")]
+    terms = [w for w in re.findall(r"\w+", _abbr(text))
+             if w not in _NAME_STOP and len(w) > 2 and not w.isdigit() and not re.match(r"^\d+-?yil", w)
+             and w not in ("yil", "yilgi", "yildagi", "hozir", "amaldami", "kuchdami", "nima", "deydi")]
+    # год, приписанный к названию через тире, — часть названия: «Oʻzbekiston–2030», «Raqamli Oʻzbekiston-2030»
+    return terms + [n for n in re.findall(r"[-–—]\s*(\d{4})\b", text or "") if n not in terms]
 
 
 def _doc_titles(lang):
@@ -343,7 +357,10 @@ def full_text_amending(lang):
 def named_docs(question, lang):
     """Номера действующих документов, названных в вопросе: название в кавычках «...» или «<слова> kodeksi/qonuni»."""
     qn = _abbr(question)
-    names = re.findall(r"[«\"“„]([^»\"”“]{4,160})[»\"”“]", question)
+    # «X» strategiyasi / konsepsiyasi / dasturi: вид документа после кавычек — тоже часть названия
+    names = [m.group(1) + (" " + m.group(2)[:7] if m.group(2) else "")
+             for m in re.finditer(r"[«\"“„]([^»\"”“]{4,160})[»\"”“]\s*(strategiya\w*|konsepsiya\w*|dastur\w*|"
+                                  r"стратеги\w*|концепци\w*|программ\w*)?", question, re.I)]
     names += [m.group(1) for m in re.finditer(r"([\w\- ]{3,80}?)\s+(kodeksi|kodeks|qonuni|qonun|кодекс\w*)\b", qn)]
     # Спрашивают «...gi Qonun?» — значит, нужен закон, а не указ или приказ с теми же словами в названии.
     # Многие законы есть в базе только как «“X toʻgʻrisida”gi Qonuniga oʻzgartish... kiritish haqida»: в таком
@@ -381,7 +398,7 @@ def _inactive_titles(lang):
                               (r["date"] or "")[-4:])
                              for r in db.conn().execute("SELECT key, title, form, amending, n_articles, date FROM docs "
                                                         "WHERE lang=? AND active=0 AND form IN ('Закон','Кодекс',"
-                                                        "'Конституция')", (lang,))]
+                                                        "'Конституция','Указ','Постановление')", (lang,))]
     return _old_titles[lang]
 
 
@@ -390,9 +407,12 @@ def named_inactive(question, lang, active_named=()):
     «Suv va suvdan foydalanish qonuni?» (закон заменён Водным кодексом). Берём его, только если в вопросе есть год
     этого документа, или спрашивают о статусе, или действующего закона с таким названием нет."""
     qn = _abbr(question)
-    names = re.findall(r"[«\"“„]([^»\"”“]{4,160})[»\"”“]", question)
+    # «X» strategiyasi / konsepsiyasi / dasturi: вид документа после кавычек — тоже часть названия
+    names = [m.group(1) + (" " + m.group(2)[:7] if m.group(2) else "")
+             for m in re.finditer(r"[«\"“„]([^»\"”“]{4,160})[»\"”“]\s*(strategiya\w*|konsepsiya\w*|dastur\w*|"
+                                  r"стратеги\w*|концепци\w*|программ\w*)?", question, re.I)]
     names += [m.group(1) for m in re.finditer(r"([\w\- ]{3,80}?)\s+(kodeksi|kodeks|qonuni|qonun|кодекс\w*)\b", qn)]
-    years = set(re.findall(r"\b(19\d\d|20\d\d)\b", question))
+    years = set(re.findall(r"\b(19\d\d|20\d\d)\b", question)) - set(re.findall(r"[-–—]\s*(\d{4})\b", question))
     has_active_law = any((db.doc(k, lang) or {"form": ""})["form"] in LAW_FORMS for k in active_named)
     ask_status = bool(_STATUS_Q.search(qn))
     out = []
@@ -400,16 +420,22 @@ def named_inactive(question, lang, active_named=()):
         ts = [t[: max(4, len(t) - 2)] for t in _name_terms(name)]
         if not ts:
             continue
+        prog = bool(re.search(r"\b(strateg|konsep|dastur|стратег|концеп|програм)", name, re.I))
         best = []
         for key, title, form, amending, n_art, year in _inactive_titles(lang):
             tt = re.sub(r"[^\w ]", " ", title)
-            if not all(t in tt for t in ts) or n_art < 5:
+            if not all(t in tt for t in ts):
+                continue
+            extra = len(_name_terms(title)) - len(ts)
+            if form in LAW_FORMS:
+                if n_art < 5:
+                    continue
+            elif not (prog and extra <= 1):   # указ или постановление — только стратегия/концепция с почти тем же названием
                 continue
             if years and year not in years:
                 continue
-            if not (years or ask_status or not has_active_law):
+            if not (years or ask_status or not has_active_law or form not in LAW_FORMS):
                 continue
-            extra = len(_name_terms(title)) - len(ts)
             best.append((amending or 0, extra, -n_art, key))
         best.sort()
         out += [b[-1] for b in best[:1]]
@@ -426,16 +452,23 @@ def replaced_by(old_key, lang):
     if not re.search(r"\d", num):
         return None
     words = "утратившими силу" if lang == "ru" else "kuchini yoʻqotgan"
-    rows = db.search_articles(f"{num} {words}", lang, limit=30, active_only=True, mode="AND", count=False)[0]
+    rows = db.search_articles(f"{num} {words}", lang, limit=200, active_only=True, mode="AND", count=False)[0]
     name = set(_name_terms(re.sub(r"(ni|ning)?\s+tasdiqlash.*$", "", d["title"])))
+    # дата утраты силы из статуса («kuchini yo‘qotgan 17.02.2026»): отменяющий акт принят незадолго до неё
+    lost = re.search(r"(\d\d\.\d\d\.\d{4})", d["status_warning"] or "")
+    lost = dt.date.fromisoformat(_iso(lost[1])) if lost else None
     best = []
     for r in rows:
         if not re.search(r"(?<![\w-])" + re.escape(num) + r"(?![\w])", r["text"] or ""):
             continue
         same = len(name & set(_name_terms(r["doc_title"])))
-        best.append((-same, r["id"]))
+        near = 10 ** 6                      # ближе всего к дате утраты силы (но не позже неё) — тот самый акт
+        if lost and _iso(r["date"]):
+            gap = (lost - dt.date.fromisoformat(_iso(r["date"]))).days
+            near = gap if 0 <= gap <= 400 else near
+        best.append((near, -same, r["id"]))
     best.sort()
-    return best[0][1] if best else None
+    return best[0][-1] if best else None
 
 
 def is_overview(question, keys, lang):
@@ -502,16 +535,16 @@ def retrieve(question, lang, rewritten, k, as_of=None, orig_rows=None):
     intro = {}
     if is_overview(question, named, lang):      # «...gi Qonun?» — первые статьи документа (maqsad, qonunchilik)
         for key in named[:1]:
-            arts = [a for a in db.articles(key, lang) if a["article"]]
-            arts.sort(key=lambda a: int(re.match(r"\d+", a["article"]).group()) if re.match(r"\d+", a["article"]) else 9999)
+            arts = [a for a in db.articles(key, lang) if a["article"]] or db.articles(key, lang)[:1]
+            arts.sort(key=lambda a: int(re.match(r"\d+", a["article"]).group()) if re.match(r"\d+", a["article"] or "") else 9999)
             first = [a["id"] for a in arts[:INTRO_ARTICLES]]
             for i, r in enumerate(db.articles_by_ids(first)):
                 cands[r["id"]] = (r, 1.0)
                 intro[r["id"]] = INTRO_BOOST - 0.05 * first.index(r["id"])
     # утративший силу закон, названный в вопросе (не для запроса «на дату»: тогда статус мог быть другим)
     for key in ([] if as_of else named_inactive(question, lang, named)):
-        arts = [a for a in db.articles(key, lang) if a["article"]]
-        arts.sort(key=lambda a: int(re.match(r"\d+", a["article"]).group()) if re.match(r"\d+", a["article"]) else 9999)
+        arts = [a for a in db.articles(key, lang) if a["article"]] or db.articles(key, lang)[:1]   # указ без статей
+        arts.sort(key=lambda a: int(re.match(r"\d+", a["article"]).group()) if re.match(r"\d+", a["article"] or "") else 9999)
         first = [a["id"] for a in arts[:2]]
         for r in db.articles_by_ids(first):
             cands[r["id"]] = (r, 1.0)
@@ -608,7 +641,8 @@ Answer ONLY from the numbered contexts (articles from lex.uz). Rules:
   copied character-for-character from that context, which supports the claim.
 - Answer only when a context directly answers THIS question. A context about another body, another category of
   people or another procedure (e.g. notaries instead of Karakalpakstan, pensions instead of citizens' appeals) is not
-  an answer: then set "no_answer": true.
+  an answer: then set "no_answer": true. But if a context states the rule in other words, or answers the question
+  in part, answer from it instead of refusing.
 - The law often uses other words than the question: "ketma-ket" = "surunkasiga", "ishdan boʻshatish" = "mehnat
   shartnomasini bekor qilish", "tuman hokimi" = "tuman va shaharlarning hokimlari". Read every context to the end:
   the rule is often in a later sentence or a numbered item.
@@ -617,9 +651,13 @@ Answer ONLY from the numbered contexts (articles from lex.uz). Rules:
   context answers any part of the question.
 - Each context header has the document number, adoption date and status, e.g. "(O‘RQ-682, 20.04.2021, amalda)".
   If the question is about a law or code as a whole («...gi Qonun?», «Soliq kodeksi?»), say its number, adoption
-  date and status, then its purpose or subject (usually article 1), with citations. Never answer with the sentence
+  date and status, then a short overview from its first articles: purpose or subject (usually article 1), scope
+  (who and what it applies to), the main terms or principles, and 2-4 key provisions as a short list, each with a
+  citation. This overview may be longer than 5 sentences. Never answer with the sentence
   "... qonunchilik ushbu Qonun va boshqa qonunchilik hujjatlaridan iborat" - it says nothing.
 - If a document is "kuchini yoʻqotgan" or "yangi tahrirda", say so and do not present its rules as current law.
+- If contexts give different values for the same amount or term (e.g. BHM in several decrees), give the value from
+  the latest document and say from which date it applies.
 - Never mention "contexts", "kontekst" or their numbers in words; refer to sources only with [n].
 - Write the answer in: {lang_name}. Structure: first one sentence that answers the question directly (for a
   yes/no question start with "Ha" / "Yoʻq" / "Да" / "Нет"); then the key conditions, terms, numbers or list items
@@ -655,10 +693,20 @@ def _llm_text(system, user, small=False, json_mode=False, temperature=0, seed=No
             kw["max_tokens"] = 80      # ключевые слова короткие: меньше ждать
         if seed is not None:
             kw["seed"] = seed
-        try:
-            r = client.chat.completions.create(temperature=temperature, **kw)
-        except BadRequestError:  # некоторые модели не принимают temperature
-            r = client.chat.completions.create(**kw)
+        if re.match(r"(gpt-5|o\d)", kw["model"]):   # рассуждающие модели: без temperature, свой лимит токенов
+            if "max_tokens" in kw:
+                kw["max_completion_tokens"] = max(kw.pop("max_tokens"), 2000)
+            kw["reasoning_effort"] = os.environ.get("OPENAI_REASONING_EFFORT", "low")
+            try:
+                r = client.chat.completions.create(**kw)
+            except BadRequestError:  # модель не приняла seed или reasoning_effort
+                kw.pop("seed", None); kw.pop("reasoning_effort", None)
+                r = client.chat.completions.create(**kw)
+        else:
+            try:
+                r = client.chat.completions.create(temperature=temperature, **kw)
+            except BadRequestError:  # некоторые модели не принимают temperature
+                r = client.chat.completions.create(**kw)
         if r.usage:
             usage = {"input_tokens": r.usage.prompt_tokens, "output_tokens": r.usage.completion_tokens}
         return r.choices[0].message.content or "", usage
@@ -893,7 +941,8 @@ def answer_item(item, opts):
                 if d is not None:
                     overview_meta = (d["title"], _doc_meta(d))
                     user += (f"\n\nThe question asks about the document as a whole: {d['title']} "
-                             f"({_doc_meta(d)}). Name its number, date and status, then what it regulates.")
+                             f"({_doc_meta(d)}). Name its number, date and status, then give a short overview: purpose, scope, "
+                             f"main terms or principles and key provisions, each with a citation.")
             text, u2 = _llm_text(GEN_SYSTEM.format(lang_name=LANG_NAME[alang]), user, json_mode=True,
                                  temperature=opts.get("temperature", 0), seed=opts.get("seed"))
             m = re.search(r"\{.*\}", text, re.S)
