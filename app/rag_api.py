@@ -969,13 +969,13 @@ def answer_item(item, opts):
             # Второй шанс: модель отказалась, хотя статьи найдены. Новые модели отказываются слишком охотно
             # («норма сказана другими словами» = «нет ответа»). Не для ловушек: чужая страна, несуществующая статья.
             if out.get("no_answer") and REFUSAL_RETRY and not old_docs and not _trap_like(question, ctxs):
-                text2, u3 = _llm_text(GEN_SYSTEM.format(lang_name=LANG_NAME[alang]), user + RETRY_NOTE,
-                                      json_mode=True, temperature=opts.get("temperature", 0), seed=opts.get("seed"))
-                u2 = {k: u2[k] + u3[k] for k in u2}
-                m2 = re.search(r"\{.*\}", text2, re.S)
                 try:
+                    text2, u3 = _llm_text(GEN_SYSTEM.format(lang_name=LANG_NAME[alang]), user + RETRY_NOTE,
+                                          json_mode=True, temperature=opts.get("temperature", 0), seed=opts.get("seed"))
+                    u2 = {k: u2[k] + u3[k] for k in u2}
+                    m2 = re.search(r"\{.*\}", text2, re.S)
                     out2 = json.loads(m2.group(0) if m2 else text2)
-                except ValueError:
+                except Exception:  # второй проход необязателен: при сбое остаётся первый ответ
                     out2 = {}
                 if not out2.get("no_answer") and out2.get("citations") and re.search(r"\[\d+\]", out2.get("answer") or ""):
                     out = out2
