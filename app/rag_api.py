@@ -15,7 +15,7 @@ from . import db, semantic, llm
 from .textnorm import norm, terms
 from .translit import detect, cyr_to_lat, db_lang
 
-PIPELINE_VERSION = "0.3.9"
+PIPELINE_VERSION = "0.3.10"
 SYNC_TIMEOUT = float(os.environ.get("RAG_SYNC_TIMEOUT", "110"))
 ITEM_TIMEOUT = float(os.environ.get("RAG_ITEM_TIMEOUT", "60"))
 WORKERS = int(os.environ.get("RAG_WORKERS", "10"))
@@ -322,8 +322,8 @@ def _abbr(q):
 
 def _name_terms(text):
     terms = [w for w in re.findall(r"\w+", _abbr(text))
-             if w not in _NAME_STOP and len(w) > 1 and not w.isdigit() and not re.match(r"^\d+-?yil", w)
-             and w not in ("yilgi", "yildagi", "hozir", "amaldami", "kuchdami")]
+             if w not in _NAME_STOP and len(w) > 2 and not w.isdigit() and not re.match(r"^\d+-?yil", w)
+             and w not in ("yil", "yilgi", "yildagi", "hozir", "amaldami", "kuchdami", "nima", "deydi")]
     # год, приписанный к названию через тире, — часть названия: «Oʻzbekiston–2030», «Raqamli Oʻzbekiston-2030»
     return terms + [n for n in re.findall(r"[-–—]\s*(\d{4})\b", text or "") if n not in terms]
 
@@ -641,7 +641,8 @@ Answer ONLY from the numbered contexts (articles from lex.uz). Rules:
   copied character-for-character from that context, which supports the claim.
 - Answer only when a context directly answers THIS question. A context about another body, another category of
   people or another procedure (e.g. notaries instead of Karakalpakstan, pensions instead of citizens' appeals) is not
-  an answer: then set "no_answer": true.
+  an answer: then set "no_answer": true. But if a context states the rule in other words, or answers the question
+  in part, answer from it instead of refusing.
 - The law often uses other words than the question: "ketma-ket" = "surunkasiga", "ishdan boʻshatish" = "mehnat
   shartnomasini bekor qilish", "tuman hokimi" = "tuman va shaharlarning hokimlari". Read every context to the end:
   the rule is often in a later sentence or a numbered item.
