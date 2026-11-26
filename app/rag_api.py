@@ -15,7 +15,7 @@ from . import db, semantic, llm
 from .textnorm import norm, terms
 from .translit import detect, cyr_to_lat, db_lang
 
-PIPELINE_VERSION = "0.3.8"
+PIPELINE_VERSION = "0.3.9"
 SYNC_TIMEOUT = float(os.environ.get("RAG_SYNC_TIMEOUT", "110"))
 ITEM_TIMEOUT = float(os.environ.get("RAG_ITEM_TIMEOUT", "60"))
 WORKERS = int(os.environ.get("RAG_WORKERS", "10"))
@@ -303,7 +303,7 @@ _NAME_STOP = {"qonun", "qonuni", "qonunlari", "qonunning", "kodeks", "kodeksi", 
               "togrisidagi", "amaldagi", "закон", "закона", "кодекс", "кодекса", "о", "об", "оʻzbekiston", "ozbekiston",
               "respublikasi", "respublikasining", "uchun", "nima", "nimani", "deydi", "haqida", "va"}
 _titles = {}
-INTRO_ARTICLES = 3
+INTRO_ARTICLES = 5
 
 
 def _abbr(q):
@@ -622,7 +622,9 @@ Answer ONLY from the numbered contexts (articles from lex.uz). Rules:
   context answers any part of the question.
 - Each context header has the document number, adoption date and status, e.g. "(O‘RQ-682, 20.04.2021, amalda)".
   If the question is about a law or code as a whole («...gi Qonun?», «Soliq kodeksi?»), say its number, adoption
-  date and status, then its purpose or subject (usually article 1), with citations. Never answer with the sentence
+  date and status, then a short overview from its first articles: purpose or subject (usually article 1), scope
+  (who and what it applies to), the main terms or principles, and 2-4 key provisions as a short list, each with a
+  citation. This overview may be longer than 5 sentences. Never answer with the sentence
   "... qonunchilik ushbu Qonun va boshqa qonunchilik hujjatlaridan iborat" - it says nothing.
 - If a document is "kuchini yoʻqotgan" or "yangi tahrirda", say so and do not present its rules as current law.
 - Never mention "contexts", "kontekst" or their numbers in words; refer to sources only with [n].
@@ -904,7 +906,8 @@ def answer_item(item, opts):
                 if d is not None:
                     overview_meta = (d["title"], _doc_meta(d))
                     user += (f"\n\nThe question asks about the document as a whole: {d['title']} "
-                             f"({_doc_meta(d)}). Name its number, date and status, then what it regulates.")
+                             f"({_doc_meta(d)}). Name its number, date and status, then give a short overview: purpose, scope, "
+                             f"main terms or principles and key provisions, each with a citation.")
             text, u2 = _llm_text(GEN_SYSTEM.format(lang_name=LANG_NAME[alang]), user, json_mode=True,
                                  temperature=opts.get("temperature", 0), seed=opts.get("seed"))
             m = re.search(r"\{.*\}", text, re.S)
