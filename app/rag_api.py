@@ -411,6 +411,13 @@ def named_docs(question, lang):
 _old_titles = {}
 LAW_FORMS = ("Закон", "Кодекс", "Конституция")
 _YESNO = re.compile(r"\w+(mi|mu|ми|му)\b\s*\??\s*$|\bли\b", re.I)
+# вопросительное слово: тогда «...qismi?» — не вопрос «да/нет», хотя кончается на -mi
+_WH = re.compile(r"\b(qaysi|qanday|qanaqa|nima\w*|qachon|qayer\w*|kim\w*|qancha|necha\w*|nega|nimaga|"
+                 r"какой|какая|какое|какие|что|когда|где|куда|кто|сколько|почему|зачем)\b", re.I)
+
+
+def _yes_no(question):
+    return bool(_YESNO.search(question or "")) and not _WH.search(question or "")
 _STATUS_Q = re.compile(r"amalda(mi)?\b|kuchda(mi)?\b|kuchini yo\W?qot|bekor qilingan|действу|утрат", re.I)
 
 
@@ -985,7 +992,7 @@ def answer_item(item, opts):
                 user += (f"\n\nThe question names a document that is NOT in force: {d['title']} ({_doc_meta(d)}; "
                          f"{d['status_warning'] or 'kuchini yoʻqotgan'}). Say clearly that it is not in force and since "
                          f"when, cite it, and name the act in force on this subject if a context shows it."
-                         + ("" if _STATUS_Q.search(question) or _YESNO.search(question) else
+                         + ("" if _STATUS_Q.search(question) or _yes_no(question) else
                             " The question is not a yes/no question: do not start with \"Yoʻq\" / \"Нет\"; "
                             "first name that document (number, date) and what it is about, then say it is not in "
                             "force and since when."))
