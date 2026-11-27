@@ -15,7 +15,7 @@ from . import db, semantic, llm
 from .textnorm import norm, terms
 from .translit import detect, cyr_to_lat, db_lang
 
-PIPELINE_VERSION = "0.3.11"
+PIPELINE_VERSION = "0.3.12"
 SYNC_TIMEOUT = float(os.environ.get("RAG_SYNC_TIMEOUT", "110"))
 ITEM_TIMEOUT = float(os.environ.get("RAG_ITEM_TIMEOUT", "60"))
 WORKERS = int(os.environ.get("RAG_WORKERS", "10"))
@@ -253,6 +253,17 @@ EXPAND = [
     (r"\bmerosxo['ʻ‘’`]?r\w*|\bнаследств\w*|\bнаследник\w*", "meros vorislik наследование"),
     (r"\bворовств\w*|\bукра(л|ли|ла|сть|ден|дут)\w*|\bкраж\w*", "кража"),
     (r"\bketma.ket\b", "surunkasiga"),
+    # сокращения: в поиск идёт полное название (ABBR ниже действует только на поиск документа по названию)
+    (r"\bdxsh\b", "davlat-xususiy sheriklik"), (r"\bдхш\b|\bгчп\b", "государственно-частное партнерство"),
+    (r"\boav\b", "ommaviy axborot vositalari"), (r"\bсми\b", "средства массовой информации"),
+    (r"\bai\b|\bии\b|\bsun\W?iy intellekt\w*", "sunʼiy intellekt искусственный интеллект"),
+    (r"\bochiq ma\W?lumot\w*", "davlat hokimiyati va boshqaruvi organlari faoliyatining ochiqligi rasmiy veb-sayt"),
+    (r"\bоткрыт\w* данн\w*", "открытость деятельности органов государственной власти и управления официальный веб-сайт"),
+    (r"\boperator\w*\W+mulkdor\w*|\bmulkdor\w*\W+operator\w*", "shaxsga doir maʼlumotlar bazasi"),
+    (r"\bhokim\w*\b.*\btayinla\w*|\btayinla\w*.*\bhokim\w*", "hokimi tayinlanadi lavozimidan ozod etiladi tasdiqlanadi"),
+    (r"\bhokim\w*\b.*\byer\b|\byer\b.*\bhokim\w*", "mahalliy davlat hokimiyati organlarining yer munosabatlarini tartibga solishi"),
+    (r"\bishsiz\w*", "shaxslarni ishsiz deb eʼtirof etish shartlari"),
+    (r"\bsir(i|lar)\w*\b.*\b(ochish|ochil|oshkor)\w*", "sirlarini oshkor qilish maxfiylikdan chiqarish"),
     # «BHM / eng kam ish haqi qancha?» — сумма задаётся указом о повышении зарплат и пенсий, а не кодексом
     (r"(\bbhm\b|bazaviy hisoblash miqdor\w*|eng kam ish haqi|\bбрв\b|базов\w* расч[её]тн\w* величин\w*|"
      r"минимальн\w* (размер )?(оплаты труда|заработн\w*))\W*.*\b(qancha|necha|miqdori\s*\?|сколько|размер)",
@@ -341,6 +352,16 @@ _full = {}
 _ONE_LAW_AMEND = re.compile(r"^\s*[«\"“„][^»\"”]{4,200}[»\"”]\s*gi\s+(Oʻzbekiston Respublikasi\s+)?"
                             r"(Qonuni|qonuni|Qonun|qonun)ga\s+oʻzgartish\w*\s+va\s+qoʻshimchalar\s+kiritish\s+(haqida|toʻgʻrisida)\s*$")
 FULL_LAW_MIN_ART = 15
+
+
+def law_name(title):
+    """«“X”gi Qonuniga oʻzgartish… kiritish haqida» -> «“X”gi Qonun (yangi tahrir)»: так называют закон люди и судья.
+    Для остальных названий — без изменений."""
+    m = _ONE_LAW_AMEND.match(title or "")
+    if not m:
+        return title
+    return re.sub(r"\s+(Oʻzbekiston Respublikasi\s+)?(Qonuni|qonuni|Qonun|qonun)ga\s+oʻzgartish.*$", " Qonun (yangi tahrir)",
+                  title.strip())
 
 
 def full_text_amending(lang):
@@ -784,7 +805,10 @@ def _contexts_block(ctxs):
         text = clean(r["text"])[:MAX_CTX_CHARS]
         note = ("\n(Bu modda faqat qonunchilik tarkibini sanaydi: savolga javob sifatida ishlatmang.)"
                 if _BOILER.search(text) and len(text) < 600 else "")
-        out.append(f"[{i}] {r['doc_title']} ({_doc_meta(r)}) — {r['heading']}\n{text}{note}")
+        title = r["doc_title"]
+        if r["key"] in full_text_amending(r["lang"] if "lang" in r.keys() else "uz"):
+            title += f" = {law_name(title)}"   # это полный текст закона, а не мелкая поправка
+        out.append(f"[{i}] {title} ({_doc_meta(r)}) — {r['heading']}\n{text}{note}")
     return "\n\n".join(out)
 
 
@@ -902,11 +926,11 @@ def _postprocess(answer, citations, overview_meta=None):
             parts[i] = p[:len(p) - len(tail)].rstrip() + " " + "".join(f"[{r}]" for r in refs) + tail
         answer = " ".join(parts)
     if overview_meta and citations:
-        title, meta = overview_meta
+        title, meta, name = (overview_meta + (overview_meta[0],))[:3]
         num = meta.split(",")[0].strip()
-        if re.search(r"\d", num) and num not in answer:
+        if re.search(r"\d", num) and norm(num) not in norm(answer):
             ref = next((c["ref"] for c in citations if c.get("doc_title") == title), citations[0]["ref"])
-            answer = f"{title} ({re.sub(r'\s*\([^)]*\)', '', meta)}) [{ref}]. " + answer
+            answer = f"{name} ({re.sub(r'\s*\([^)]*\)', '', meta)}) [{ref}]. " + answer
     return answer
 
 
@@ -959,7 +983,10 @@ def answer_item(item, opts):
                 d = db.doc(named[0], lang)
                 if d is not None:
                     overview_meta = (d["title"], _doc_meta(d))
-                    user += (f"\n\nThe question asks about the document as a whole: {d['title']} "
+                    name = law_name(d["title"]) if d["key"] in full_text_amending(lang) else d["title"]
+                    if name != d["title"]:
+                        overview_meta = (d["title"], _doc_meta(d), name)
+                    user += (f"\n\nThe question asks about the document as a whole: {name} "
                              f"({_doc_meta(d)}). Name its number, date and status, then give a short overview: purpose, scope, "
                              f"main terms or principles and key provisions, each with a citation.")
             text, u2 = _llm_text(GEN_SYSTEM.format(lang_name=LANG_NAME[alang]), user, json_mode=True,
