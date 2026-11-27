@@ -4,7 +4,7 @@
   python eval/judge_eval.py eval/runs/answers_0.3.7.csv          # оценить наш прогон answer_eval.py
   python eval/judge_eval.py --calibrate Qonunchi,Dalil           # сверить судью с оценками людей
 
-Судья (по умолчанию gpt-4.1, переменная JUDGE_MODEL) видит вопрос, примерный эталон и до трёх ответов
+Судья (по умолчанию gpt-4.1, переменная JUDGE_MODEL; mini-модели берут токены из большой бесплатной корзины) видит вопрос, примерный эталон и до трёх ответов
 других ботов, которые люди оценили «верно» (eval/lex100_graded.csv, в git не хранится:
 в нём ответы других команд). Балл как в таблице: верно = 1, частично = 0.5.
 При --calibrate судья оценивает ответы названных ботов из той же таблицы, а ответ самого бота в образцы не берёт;
@@ -58,8 +58,9 @@ def judge(question, etalon, refs, answer):
     msg.append(f"ANSWER TO GRADE:\n{(answer or '').strip()[:3000] or '(empty)'}")
     for attempt in range(4):
         try:
+            kw = {} if MODEL.startswith(("gpt-5", "o")) else {"temperature": 0, "seed": 42}  # gpt-5: только по умолчанию
             r = OpenAI().chat.completions.create(
-                model=MODEL, temperature=0, seed=42, response_format={"type": "json_object"},
+                model=MODEL, response_format={"type": "json_object"}, **kw,
                 messages=[{"role": "system", "content": PROMPT}, {"role": "user", "content": "\n\n".join(msg)}])
             if r.usage:
                 with _lock:
@@ -89,6 +90,8 @@ def main():
     ap.add_argument("--calibrate", help="боты из таблицы через запятую, например Qonunchi,Dalil")
     ap.add_argument("--out", default="")
     ap.add_argument("--workers", type=int, default=6)
+    ap.add_argument("--reuse", nargs="*", default=[],
+                    help="прошлые *_judged.csv того же судьи: для слово в слово тех же ответов оценка берётся оттуда")
     a = ap.parse_args()
     if not os.environ.get("OPENAI_API_KEY"):
         raise SystemExit("Нужен OPENAI_API_KEY в .env")
@@ -128,7 +131,17 @@ def main():
         rows = by_q.get(r["id"], [])
         ans = "(refusal) " + r["answer"] if r.get("no_answer") == "1" else r["answer"]
         items.append((r["question"], rows[0]["etalon"] if rows else "", references(rows, skip_bot="Qonunchi"), ans))
-    res = run(items, a.workers)
+    known = {}
+    for f in a.reuse:
+        if os.path.exists(f):
+            for x in csv.DictReader(open(f, encoding="utf-8")):
+                if x["grade"] in GRADES:
+                    known[(x["id"], x["answer"].strip())] = (x["grade"], x["missing"])
+    todo = [i for i, r in enumerate(ours) if (r["id"], r["answer"].strip()) not in known]
+    got = dict(zip(todo, run([items[i] for i in todo], a.workers)))
+    res = [got[i] if i in got else known[(r["id"], r["answer"].strip())] for i, r in enumerate(ours)]
+    if a.reuse:
+        print(f"оценки взяты из прошлых прогонов: {len(ours) - len(todo)}, судья оценил заново: {len(todo)}")
     out = a.out or a.answers.replace(".csv", "_judged.csv")
     w = csv.writer(open(out, "w", encoding="utf-8", newline=""))
     w.writerow(["id", "question", "grade", "missing", "old_grade", "answer"])
