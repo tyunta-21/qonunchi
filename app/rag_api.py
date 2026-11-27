@@ -15,7 +15,7 @@ from . import db, semantic, llm
 from .textnorm import norm, terms
 from .translit import detect, cyr_to_lat, db_lang
 
-PIPELINE_VERSION = "0.3.12"
+PIPELINE_VERSION = "0.3.13"
 SYNC_TIMEOUT = float(os.environ.get("RAG_SYNC_TIMEOUT", "110"))
 ITEM_TIMEOUT = float(os.environ.get("RAG_ITEM_TIMEOUT", "60"))
 WORKERS = int(os.environ.get("RAG_WORKERS", "10"))
@@ -410,6 +410,7 @@ def named_docs(question, lang):
 
 _old_titles = {}
 LAW_FORMS = ("Закон", "Кодекс", "Конституция")
+_YESNO = re.compile(r"\w+(mi|mu|ми|му)\b\s*\??\s*$|\bли\b", re.I)
 _STATUS_Q = re.compile(r"amalda(mi)?\b|kuchda(mi)?\b|kuchini yo\W?qot|bekor qilingan|действу|утрат", re.I)
 
 
@@ -677,8 +678,13 @@ Answer ONLY from the numbered contexts (articles from lex.uz). Rules:
   citation. This overview may be longer than 5 sentences. Never answer with the sentence
   "... qonunchilik ushbu Qonun va boshqa qonunchilik hujjatlaridan iborat" - it says nothing.
 - If a document is "kuchini yoʻqotgan" or "yangi tahrirda", say so and do not present its rules as current law.
+- "Ochish" / "oshkor qilish" / "разглашение" of a secret (davlat siri, tijorat siri, shaxsga doir maʼlumot) means
+  revealing it to others; "maxfiylikdan chiqarish" (declassification) is a separate procedure. If a context bans
+  disclosure or sets liability for it, answer the "mumkinmi?" question with "Yoʻq" from that rule first, then
+  mention declassification only as a separate procedure.
 - If contexts give different values for the same amount or term (e.g. BHM in several decrees), give the value from
-  the latest document and say from which date it applies.
+  the latest document and say from which date it applies; for BHM/БРВ add that its amount is changed
+  periodically by a decree.
 - Never mention "contexts", "kontekst" or their numbers in words; refer to sources only with [n].
 - Write the answer in: {lang_name}. Structure: first one sentence that answers the question directly (for a
   yes/no question start with "Ha" / "Yoʻq" / "Да" / "Нет"); then the key conditions, terms, numbers or list items
@@ -978,7 +984,11 @@ def answer_item(item, opts):
                 d = db.doc(old_docs[0], lang)
                 user += (f"\n\nThe question names a document that is NOT in force: {d['title']} ({_doc_meta(d)}; "
                          f"{d['status_warning'] or 'kuchini yoʻqotgan'}). Say clearly that it is not in force and since "
-                         f"when, cite it, and name the act in force on this subject if a context shows it.")
+                         f"when, cite it, and name the act in force on this subject if a context shows it."
+                         + ("" if _STATUS_Q.search(question) or _YESNO.search(question) else
+                            " The question is not a yes/no question: do not start with \"Yoʻq\" / \"Нет\"; "
+                            "first name that document (number, date) and what it is about, then say it is not in "
+                            "force and since when."))
             elif is_overview(q_search, named, lang):
                 d = db.doc(named[0], lang)
                 if d is not None:
