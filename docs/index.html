@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Case study: Qonunchi RAG</title>
-<meta name="description" content="Retrieval-augmented assistant over 30,125 laws of Uzbekistan, in Uzbek and Russian, with article-level citations and its own evaluation harness.">
+<meta name="description" content="Retrieval-augmented assistant over 28,507 legal documents of Uzbekistan, in Uzbek and Russian, with article-level citations and its own evaluation harness.">
 <style>
 :root{--bg:#fafaf7;--fg:#1c1d1f;--muted:#5d6168;--line:#e3e2dc;--card:#fff;--accent:#1f6f5c;--accent-bg:#e6f2ee;--warn:#8a5a00;--warn-bg:#fdf3e1}
 @media (prefers-color-scheme:dark){:root{--bg:#141516;--fg:#ececea;--muted:#a0a4aa;--line:#2c2e31;--card:#1c1d1f;--accent:#5cc2a6;--accent-bg:#183029;--warn:#f0b65a;--warn-bg:#2e2410}}
@@ -51,7 +51,7 @@ a{color:var(--accent)}
 <p class="note">Personal project · Uzbek & Russian · 2026</p>
 <h1>Case study: Qonunchi RAG</h1>
 <p class="lead" style="color:var(--fg);margin-bottom:6px"><b>A legal assistant for Uzbekistan, built on retrieval-augmented generation.</b></p>
-<p class="lead">Ask a question about Uzbek law in Uzbek or Russian. Qonunchi searches 30,125 official documents from lex.uz, answers in the language of the question and quotes the exact article it relied on. Every change to the pipeline is checked against a 100-question test set.</p>
+<p class="lead">Ask a question about Uzbek law in Uzbek or Russian. Qonunchi searches 28,507 official documents from lex.uz, answers in the language of the question and quotes the exact article it relied on. Every change to the pipeline is checked against the LEX_100 benchmark (100 questions with reference answers).</p>
 <div class="btns">
   <a class="btn primary" href="https://3-27-43-72.sslip.io/uz/assistant">Try the live assistant</a>
   <a class="btn" href="https://github.com/tyunta-21/qonunchi">Source code</a>
@@ -60,9 +60,9 @@ a{color:var(--accent)}
 
 <h2>Results</h2>
 <div class="kpis">
-  <div class="kpi"><div class="v">70.8 → 86.5<small>%</small></div><div class="l">Hit@5, first keyword-only version vs. current hybrid search</div></div>
-  <div class="kpi"><div class="v">0.59 → 0.72</div><div class="l">MRR on the same retrieval test</div></div>
-  <div class="kpi"><div class="v">92.5<small> / 100</small></div><div class="l">LEX_100 answer score from my LLM judge (±3)</div></div>
+  <div class="kpi"><div class="v">70.8 → 86.5<small>%</small></div><div class="l">Retrieval Hit@5, first version vs. current, on 89 LEX_100 questions with gold articles</div></div>
+  <div class="kpi"><div class="v">0.59 → 0.72</div><div class="l">MRR on the same 89 questions</div></div>
+  <div class="kpi"><div class="v">92.5<small> / 100</small></div><div class="l">LEX_100 answer score from my LLM judge, all 100 questions (±3)</div></div>
   <div class="kpi"><div class="v">100<small>%</small></div><div class="l">trap questions correctly refused</div></div>
 </div>
 <p class="note" style="margin-top:10px">LEX_100 is a public benchmark of 100 legal questions. Human graders gave the first version 59.5; the best team scored 81.5. The 92.5 for the current version comes from <code>eval/judge_eval.py</code>, which agrees with the human grades on 81 of 100 answers and runs about 0.5 points above them, so I treat it as roughly 89–92 by human standards.</p>
@@ -86,7 +86,7 @@ a{color:var(--accent)}
 <h2>Evaluation</h2>
 <p>I built the evaluation before tuning anything, so every version has a number next to it.</p>
 <ul>
-  <li><b>Retrieval</b> (<code>eval/retrieval_eval.py</code>): Hit@k and MRR against the expected document and article for each question.</li>
+  <li><b>Retrieval</b> (<code>eval/retrieval_eval.py</code>): Hit@k and MRR against the gold document and article, on the 89 LEX_100 questions that have one. Measured offline with keyword search and reranking only, so the gain comes from query handling and reranking, not from the embeddings.</li>
   <li><b>Answers</b> (<code>eval/judge_eval.py</code>): an LLM judge grades each answer as correct, partial, wrong or no answer, using the reference answer and human-graded answers from other teams as examples. It was calibrated against the human grades before use.</li>
   <li><b>Faithfulness</b>: each citation carries a quote, which is matched back to the text of the cited article.</li>
   <li><b>Hold-out sets</b> of 20 and 50 questions to catch overfitting to the main set.</li>
@@ -101,7 +101,7 @@ a{color:var(--accent)}
 <h2>Stack</h2>
 <div class="tbl"><table>
   <tr><th>Part</th><th>What I used</th></tr>
-  <tr><td>Data</td><td>30,125 documents scraped from lex.uz, split by article (SQLite, ~1 GB)</td></tr>
+  <tr><td>Data</td><td>28,507 documents scraped from lex.uz (1,618 of them also in Russian), split by article (SQLite, ~1 GB)</td></tr>
   <tr><td>Search</td><td>SQLite FTS5 (BM25) + fastembed with multilingual-e5-small on CPU</td></tr>
   <tr><td>LLM</td><td>OpenAI API (gpt-5.4-mini for answers, gpt-4.1-mini as judge); Anthropic API supported</td></tr>
   <tr><td>Backend</td><td>Python, FastAPI, a batch RAG API with API keys and rate limits</td></tr>
