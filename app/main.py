@@ -3,6 +3,7 @@ import math, os, re, time
 from collections import defaultdict, deque
 
 from fastapi import FastAPI, HTTPException, Request
+from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -22,6 +23,12 @@ _hits = defaultdict(deque)
 # общий лимит на всех за сутки (UTC, совпадает со сбросом бесплатной квоты OpenAI); 0 = без лимита
 DAY_LIMIT = int(os.environ.get("CHAT_LIMIT_PER_DAY", "200"))
 _day = {"date": "", "n": 0}
+
+
+def _art_name(label, lang):
+    """«543-modda» → «Статья 543» для русских документов."""
+    m = re.fullmatch(r"(.+)-modda", label or "")
+    return f"Статья {m[1]}" if m and lang == "ru" else label
 
 
 def snip_html(s):
@@ -126,23 +133,23 @@ async def chat(request: Request):
         return JSONResponse({"error": T[lang]["day_limited"]}, 429)
     _day["n"] += 1
     dq.append(now)
-    # вопрос для поиска: добавляем прошлый вопрос, чтобы уточнения («а если…») находили ту же тему
+    # тот же конвейер, что проходит оценку LEX_100: BM25 + e5-эмбеддинги, реранкинг, ответ с цитатами
     history = body.get("history") or []
     prev = [h.get("content", "") for h in history if h.get("role") == "user"][-1:]
+    question = q if not prev or len(q) > 80 else f"{prev[0][:300]}\n{q}"   # короткое уточнение («а если…»)
     try:
-        kw = llm.search_keywords(q, lang, history)
-        srcs = db.retrieve(q + " " + " ".join(prev)[:300], lang, extra_query=kw)
-        text, used = llm.answer(q, lang, history, srcs)
-    except Exception as e:  # ключ не задан, нет денег на счёте, сеть и т. п.
-        print("LLM error:", repr(e))
+        res = await run_in_threadpool(rag_api.answer_item, {"id": "site", "question": question},
+                                      {"top_k": 5, "temperature": 0, "_site": True})
+    except Exception as e:
+        res = {"status": "error", "error": repr(e)}
+    if res.get("status") == "error":   # ключ не задан, нет денег на счёте, сеть и т. п.
+        print("LLM error:", res.get("error"))
         return JSONResponse({"error": T[lang]["ai_error"]}, 502)
-    sources = []
-    for i, s in enumerate(srcs, 1):
-        sources.append({"n": i, "used": i in used, "heading": s["heading"], "doc_title": s["doc_title"],
-                        "active": bool(s["active"]), "url": f"/{s['lang']}/doc/{s['key']}#a{s['id']}",
-                        "src_url": s["src_url"]})
-    if used:
-        sources = [s for s in sources if s["used"]] + [s for s in sources if not s["used"]][:2]
+    text = res.get("answer") or ""
+    sources = [{"n": c["ref"], "used": True, "heading": _art_name(c.get("article"), c.get("_lang", lang)) or c["doc_title"], "doc_title": c["doc_title"],
+                "quote": c.get("quote") or "", "active": c.get("_active", True),
+                "url": f"/{c.get('_lang', lang)}/doc/{c['doc_id'][4:]}#a{c['_aid']}" if c.get("_aid") else c["url"],
+                "src_url": c["url"]} for c in res.get("citations") or []]
     return {"answer": text, "sources": sources, "disclaimer": llm.DISCLAIMER[lang], "mode": llm.PROVIDER}
 
 

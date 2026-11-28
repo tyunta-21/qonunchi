@@ -38,7 +38,8 @@
       if (d.sources && d.sources.length) {
         h += `<div class="srcs"><b>${T.ai_sources}</b><ol>` + d.sources.map(s =>
           `<li value="${s.n}"><a href="${s.url}">${esc(s.heading)}</a> <span class="dt">— ${esc(s.doc_title)}${s.active ? '' : ' · ' + T.inactive_badge}</span>` +
-          (s.src_url ? ` <a href="${s.src_url}" target="_blank" rel="noopener" class="dt">lex.uz ↗</a>` : '') + '</li>').join('') + '</ol></div>';
+          (s.src_url ? ` <a href="${s.src_url}" target="_blank" rel="noopener" class="dt">lex.uz ↗</a>` : '') +
+          (s.quote ? `<blockquote class="quote">${esc(s.quote)}</blockquote>` : '') + '</li>').join('') + '</ol></div>';
       }
       h += `<div class="disc">${esc(d.disclaimer || '')}</div>`;
       add('bot', h);

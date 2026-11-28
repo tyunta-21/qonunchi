@@ -36,7 +36,7 @@ if [ ! -s "$ENVF" ]; then
   read -r -p "  Вставьте RAG_API_KEYS (ключ для проверяющего из .env) и нажмите Enter: " RKEY
   [ -n "$OKEY" ] || fail "Пустой OPENAI_API_KEY."
   umask 077
-  printf 'AI_PROVIDER=openai\nOPENAI_API_KEY=%s\nOPENAI_MODEL=gpt-4.1-mini\nRAG_API_KEYS=%s\nCHAT_LIMIT_PER_HOUR=30\nRAG_WORKERS=3\n' "$OKEY" "$RKEY" > "$ENVF"
+  printf 'AI_PROVIDER=openai\nOPENAI_API_KEY=%s\nOPENAI_MODEL=gpt-4.1-mini\nRAG_API_KEYS=%s\nCHAT_LIMIT_PER_HOUR=30\nCHAT_LIMIT_PER_DAY=200\nRAG_WORKERS=3\n' "$OKEY" "$RKEY" > "$ENVF"
 fi
 
 echo "4/5 Собираю образ: база законов ~1 ГБ и модель поиска, 5–15 минут. Старый сайт пока работает…"
@@ -46,15 +46,31 @@ echo "5/5 Перезапускаю…"
 docker tag qonunchi:latest qonunchi:prev >/dev/null 2>&1 || true
 docker tag qonunchi:new qonunchi:latest
 docker rm -f qonunchi >/dev/null 2>&1 || true
-docker run -d --name qonunchi --restart=always -p 80:10000 --env-file "$ENVF" qonunchi:latest >/dev/null
-
 IP=$(curl -fsS -m 5 https://checkip.amazonaws.com 2>/dev/null || hostname -I | awk '{print $1}')
-for i in $(seq 1 60); do curl -fsS -m 3 http://localhost/v1/health >/dev/null 2>&1 && break; sleep 2; done
+# HTTPS: HTTPS=1 ставит Caddy перед сайтом, бесплатный адрес <ip-через-дефисы>.sslip.io и сертификат Let's Encrypt.
+# В AWS Security Group должны быть открыты порты 80 и 443. Выбор запоминается в /etc/qonunchi.https.
+[ -n "${HTTPS:-}" ] && echo "$HTTPS" > /etc/qonunchi.https
+HTTPS=$(cat /etc/qonunchi.https 2>/dev/null || echo 0)
+DOMAIN=${DOMAIN:-$(echo "$IP" | tr . -).sslip.io}
+docker network create qn >/dev/null 2>&1 || true
+if [ "$HTTPS" = 1 ]; then
+  docker run -d --name qonunchi --restart=always --network qn -p 127.0.0.1:10000:10000 --env-file "$ENVF" qonunchi:latest >/dev/null
+  docker rm -f caddy >/dev/null 2>&1 || true
+  docker run -d --name caddy --restart=always --network qn -p 80:80 -p 443:443 -v caddy_data:/data \
+    caddy:2.8.4 caddy reverse-proxy --from "$DOMAIN" --to qonunchi:10000 >/dev/null
+  HEALTH=http://localhost:10000/v1/health; URL=https://$DOMAIN; PORTS="-p 127.0.0.1:10000:10000"
+else
+  docker rm -f caddy >/dev/null 2>&1 || true
+  docker run -d --name qonunchi --restart=always --network qn -p 80:10000 --env-file "$ENVF" qonunchi:latest >/dev/null
+  HEALTH=http://localhost/v1/health; URL=http://$IP; PORTS="-p 80:10000"
+fi
+
+for i in $(seq 1 60); do curl -fsS -m 3 "$HEALTH" >/dev/null 2>&1 && break; sleep 2; done
 echo
-if curl -fsS -m 3 http://localhost/v1/health >/dev/null 2>&1; then
-  echo "ГОТОВО. Сайт работает: http://$IP"
+if curl -fsS -m 3 "$HEALTH" >/dev/null 2>&1; then
+  echo "ГОТОВО. Сайт работает: $URL"
   docker image prune -f >/dev/null 2>&1 || true
 else
   echo "Сайт запущен, но пока не отвечает. Логи: sudo docker logs qonunchi"
-  echo "Вернуть прошлую версию: sudo docker rm -f qonunchi && sudo docker run -d --name qonunchi --restart=always -p 80:10000 --env-file $ENVF qonunchi:prev"
+  echo "Вернуть прошлую версию: sudo docker rm -f qonunchi && sudo docker run -d --name qonunchi --restart=always --network qn $PORTS --env-file $ENVF qonunchi:prev"
 fi

@@ -112,6 +112,7 @@ mark{background:var(--mark);padding:0 1px;border-radius:2px}
 .srcs{margin-top:8px;border-top:1px dashed var(--line);padding-top:7px;font-size:13px}
 .srcs b{color:var(--muted);font-size:12px;text-transform:uppercase}
 .srcs ol{margin:4px 0 0;padding-left:20px} .srcs li{margin-bottom:3px}
+.srcs .quote{margin:3px 0 6px;padding:4px 8px;border-left:3px solid var(--line);color:var(--muted);font-size:12.5px;font-style:italic}
 .srcs .dt{color:var(--muted);font-size:12px}
 .disc{font-size:12px;color:var(--muted);margin-top:7px;font-style:italic}
 .mock-note{font-size:12.5px;background:#fff8e1;border:1px solid #f0d98a;color:#5c4a0d;padding:7px 10px;border-radius:6px}
