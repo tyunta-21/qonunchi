@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Case study: Qonunchi RAG</title>
-<meta name="description" content="Retrieval-augmented assistant over 30,125 laws of Uzbekistan, in Uzbek and Russian, with article-level citations and its own evaluation harness.">
+<meta name="description" content="Retrieval-augmented assistant over 28,507 legal documents of Uzbekistan, in Uzbek and Russian, with article-level citations and its own evaluation harness.">
 <style>
 :root{--bg:#fafaf7;--fg:#1c1d1f;--muted:#5d6168;--line:#e3e2dc;--card:#fff;--accent:#1f6f5c;--accent-bg:#e6f2ee;--warn:#8a5a00;--warn-bg:#fdf3e1}
 @media (prefers-color-scheme:dark){:root{--bg:#141516;--fg:#ececea;--muted:#a0a4aa;--line:#2c2e31;--card:#1c1d1f;--accent:#5cc2a6;--accent-bg:#183029;--warn:#f0b65a;--warn-bg:#2e2410}}
@@ -51,7 +51,7 @@ a{color:var(--accent)}
 <p class="note">Personal project · Uzbek & Russian · 2026</p>
 <h1>Case study: Qonunchi RAG</h1>
 <p class="lead" style="color:var(--fg);margin-bottom:6px"><b>A legal assistant for Uzbekistan, built on retrieval-augmented generation.</b></p>
-<p class="lead">Ask a question about Uzbek law in Uzbek or Russian. Qonunchi searches 30,125 official documents from lex.uz, answers in the language of the question and quotes the exact article it relied on. Every change to the pipeline is checked against a 100-question test set.</p>
+<p class="lead">Ask a question about Uzbek law in Uzbek or Russian. Qonunchi searches 28,507 official documents from lex.uz, answers in the language of the question and quotes the exact article it relied on. Every change to the pipeline is checked against the LEX_100 benchmark (100 questions with reference answers).</p>
 <div class="btns">
   <a class="btn primary" href="https://3-27-43-72.sslip.io/uz/assistant">Try the live assistant</a>
   <a class="btn" href="https://github.com/tyunta-21/qonunchi">Source code</a>
@@ -101,7 +101,7 @@ a{color:var(--accent)}
 <h2>Stack</h2>
 <div class="tbl"><table>
   <tr><th>Part</th><th>What I used</th></tr>
-  <tr><td>Data</td><td>30,125 documents scraped from lex.uz, split by article (SQLite, ~1 GB)</td></tr>
+  <tr><td>Data</td><td>28,507 documents scraped from lex.uz (1,618 of them also in Russian), split by article (SQLite, ~1 GB)</td></tr>
   <tr><td>Search</td><td>SQLite FTS5 (BM25) + fastembed with multilingual-e5-small on CPU</td></tr>
   <tr><td>LLM</td><td>OpenAI API (gpt-5.4-mini for answers, gpt-4.1-mini as judge); Anthropic API supported</td></tr>
   <tr><td>Backend</td><td>Python, FastAPI, a batch RAG API with API keys and rate limits</td></tr>
