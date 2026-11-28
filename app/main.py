@@ -142,7 +142,7 @@ async def chat(request: Request):
                                       {"top_k": 5, "temperature": 0, "_site": True})
     except Exception as e:
         res = {"status": "error", "error": repr(e)}
-    if res.get("status") == "error":   # ключ не задан, нет денег на счёте, сеть и т. п.
+    if res.get("status") in ("error", "timeout"):   # ключ не задан, нет денег на счёте, сеть и т. п.
         print("LLM error:", res.get("error"))
         return JSONResponse({"error": T[lang]["ai_error"]}, 502)
     text = res.get("answer") or ""
