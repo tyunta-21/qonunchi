@@ -1,5 +1,7 @@
 # Qonunchi — сайт законов Узбекистана с ИИ-помощником
 
+**Demo:** [case study](https://tyunta-21.github.io/qonunchi/) · [live assistant](https://13-210-103-30.sslip.io/uz/assistant)
+
 Что есть на сайте:
 
 - **Главная**: поиск, Конституция и все кодексы, новые законы.
