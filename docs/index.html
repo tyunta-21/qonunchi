@@ -25,7 +25,7 @@ p{margin:0 0 14px}
 .kpi .v small{font-size:16px;color:var(--muted);font-weight:500}
 .kpi .l{font-size:14px;color:var(--muted)}
 figure{margin:18px 0}
-figure img,video{width:100%;border:1px solid var(--line);border-radius:10px;display:block;background:var(--card)}
+figure img{width:100%;border:1px solid var(--line);border-radius:10px;display:block;background:var(--card)}
 figcaption{font-size:14px;color:var(--muted);margin-top:6px}
 .flow{display:grid;grid-template-columns:repeat(auto-fit,minmax(135px,1fr));gap:8px;counter-reset:s}
 .step{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 14px;font-size:14.5px}
@@ -54,9 +54,8 @@ a{color:var(--accent)}
 <div class="btns">
   <a class="btn primary" href="https://3-27-43-72.sslip.io/uz/assistant">Try the live assistant</a>
   <a class="btn" href="https://github.com/tyunta-21/qonunchi">Source code</a>
-  <a class="btn" href="#video">Watch the 2-minute demo</a>
 </div>
-<p class="note">The public demo is limited to 30 questions per hour per visitor and 200 questions per day in total, so it may say the daily limit is reached. The video below shows the same system.</p>
+<p class="note">The public demo is limited to 30 questions per hour per visitor and 200 questions per day in total, so it may say the daily limit is reached.</p>
 
 <h2>Results</h2>
 <div class="kpis">
@@ -67,11 +66,6 @@ a{color:var(--accent)}
 </div>
 <p class="note" style="margin-top:10px">LEX_100 is a public benchmark of 100 legal questions. Human graders gave the first version 59.5; the best team scored 81.5. The 92.5 for the current version comes from <code>eval/judge_eval.py</code>, which agrees with the human grades on 81 of 100 answers and runs about 0.5 points above them, so I treat it as roughly 89–92 by human standards.</p>
 
-<h2 id="video">Demo</h2>
-<figure>
-  <video controls preload="metadata" poster="assist2.png" src="qonunchi_demo.mp4"></video>
-  <figcaption>A question in Uzbek and one in Russian, the hybrid retrieval behind them, the metrics, and one failure. English subtitles.</figcaption>
-</figure>
 
 <h2>How it works</h2>
 <div class="flow">
