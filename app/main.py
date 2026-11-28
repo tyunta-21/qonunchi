@@ -19,6 +19,9 @@ tpl = Jinja2Templates(directory=os.path.join(HERE, "templates"))
 LANGS = ("uz", "ru")
 RATE_LIMIT = int(os.environ.get("CHAT_LIMIT_PER_HOUR", "30"))
 _hits = defaultdict(deque)
+# общий лимит на всех за сутки (UTC, совпадает со сбросом бесплатной квоты OpenAI); 0 = без лимита
+DAY_LIMIT = int(os.environ.get("CHAT_LIMIT_PER_DAY", "200"))
+_day = {"date": "", "n": 0}
 
 
 def snip_html(s):
@@ -116,6 +119,12 @@ async def chat(request: Request):
         dq.popleft()
     if len(dq) >= RATE_LIMIT:
         return JSONResponse({"error": T[lang]["rate_limited"]}, 429)
+    today = time.strftime("%Y-%m-%d", time.gmtime(now))
+    if _day["date"] != today:
+        _day.update(date=today, n=0)
+    if DAY_LIMIT and _day["n"] >= DAY_LIMIT:
+        return JSONResponse({"error": T[lang]["day_limited"]}, 429)
+    _day["n"] += 1
     dq.append(now)
     # вопрос для поиска: добавляем прошлый вопрос, чтобы уточнения («а если…») находили ту же тему
     history = body.get("history") or []
