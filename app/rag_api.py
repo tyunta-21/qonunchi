@@ -1072,6 +1072,8 @@ def answer_item(item, opts):
                           "doc_status": (r["doc_status"] if _has(r, "doc_status") else
                                          ("amalda" if r["active"] else "kuchini_yoqotgan")),
                           "chunk_id": _chunk_id(r), "part_chunk_id": part_cid, "quote": quote})
+        if opts.get("_site"):   # для чата на сайте: ссылка на статью в нашей базе (в ответ API не попадает)
+            citations[-1].update(_aid=r["id"], _lang=r["lang"], _active=bool(r["active"]))
     answer = out.get("answer") or ""
     answer = re.sub(r"\[(\d+)\]", lambda m: f"[{renum[int(m[1])]}]" if int(m[1]) in renum else "", answer).strip()
     answer = _postprocess(answer, citations, overview_meta)
