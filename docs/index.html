@@ -60,9 +60,9 @@ a{color:var(--accent)}
 
 <h2>Results</h2>
 <div class="kpis">
-  <div class="kpi"><div class="v">70.8 → 86.5<small>%</small></div><div class="l">Hit@5, first keyword-only version vs. current hybrid search</div></div>
-  <div class="kpi"><div class="v">0.59 → 0.72</div><div class="l">MRR on the same retrieval test</div></div>
-  <div class="kpi"><div class="v">92.5<small> / 100</small></div><div class="l">LEX_100 answer score from my LLM judge (±3)</div></div>
+  <div class="kpi"><div class="v">70.8 → 86.5<small>%</small></div><div class="l">Retrieval Hit@5, first version vs. current, on 89 LEX_100 questions with gold articles</div></div>
+  <div class="kpi"><div class="v">0.59 → 0.72</div><div class="l">MRR on the same 89 questions</div></div>
+  <div class="kpi"><div class="v">92.5<small> / 100</small></div><div class="l">LEX_100 answer score from my LLM judge, all 100 questions (±3)</div></div>
   <div class="kpi"><div class="v">100<small>%</small></div><div class="l">trap questions correctly refused</div></div>
 </div>
 <p class="note" style="margin-top:10px">LEX_100 is a public benchmark of 100 legal questions. Human graders gave the first version 59.5; the best team scored 81.5. The 92.5 for the current version comes from <code>eval/judge_eval.py</code>, which agrees with the human grades on 81 of 100 answers and runs about 0.5 points above them, so I treat it as roughly 89–92 by human standards.</p>
@@ -86,7 +86,7 @@ a{color:var(--accent)}
 <h2>Evaluation</h2>
 <p>I built the evaluation before tuning anything, so every version has a number next to it.</p>
 <ul>
-  <li><b>Retrieval</b> (<code>eval/retrieval_eval.py</code>): Hit@k and MRR against the expected document and article for each question.</li>
+  <li><b>Retrieval</b> (<code>eval/retrieval_eval.py</code>): Hit@k and MRR against the gold document and article, on the 89 LEX_100 questions that have one. Measured offline with keyword search and reranking only, so the gain comes from query handling and reranking, not from the embeddings.</li>
   <li><b>Answers</b> (<code>eval/judge_eval.py</code>): an LLM judge grades each answer as correct, partial, wrong or no answer, using the reference answer and human-graded answers from other teams as examples. It was calibrated against the human grades before use.</li>
   <li><b>Faithfulness</b>: each citation carries a quote, which is matched back to the text of the cited article.</li>
   <li><b>Hold-out sets</b> of 20 and 50 questions to catch overfitting to the main set.</li>
